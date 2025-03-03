@@ -2,9 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    //google service
-    id("com.google.gms.google-services")
-
+    id("com.google.gms.google-services") // Apply Google services plugin
 }
 
 android {
@@ -30,19 +28,23 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
 }
 
 dependencies {
+    // AndroidX libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -53,15 +55,14 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
-    // Import the Firebase BoM (Always put this before Firebase dependencies)
-    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
 
-    // Firebase dependencies
-    implementation("com.google.firebase:firebase-common-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
+    // Firebase dependencies 
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))  // Firebase BoM for version management
+    implementation("com.google.firebase:firebase-auth-ktx")  // Firebase Authentication
+    implementation("com.google.firebase:firebase-firestore-ktx")  // Firebase Firestore
+    implementation("com.google.firebase:firebase-analytics-ktx")  // Firebase Analytics
 
+    // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
