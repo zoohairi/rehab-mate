@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "565351866166",
+    "project_id": "zapjolly",
+    "storage_bucket": "zapjolly.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:565351866166:android:ad04a5470eaef004471d97",
+        "android_client_info": {
+          "package_name": "com.example.rehabmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfIQTIcbx1Kpah2NzYYT82mW5pME1UoAk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

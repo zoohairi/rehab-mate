@@ -1,44 +1,28 @@
 package com.example.rehabmate.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import android.util.Log
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
-    val usernameState = remember { mutableStateOf("") }
-    val passwordState = remember { mutableStateOf("") }
-    val errorMessage = remember { mutableStateOf("") }
-    val showError = remember { mutableStateOf(false) }
+    val auth: FirebaseAuth = FirebaseAuth.getInstance() // Firebase Authentication instance
 
-    // Use Scaffold to ensure all the contents are uniform
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -51,37 +35,31 @@ fun LoginScreen(navController: NavHostController) {
             Text(
                 text = "Welcome to RehabMate!",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.testTag("titleText"),
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(24.dp))
-            // Username input field
+
+            // Email input field
             OutlinedTextField(
-                value = usernameState.value,
+                value = email,
                 onValueChange = {
-                    usernameState.value = it
-                    if (it.isNotEmpty()) {
-                        showError.value = false
-                        errorMessage.value = ""
-                    }
+                    email = it
+                    errorMessage = ""
                 },
-                label = { Text("Enter your username") },
+                label = { Text("Enter your email") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
-                    .testTag("usernameTextField")
+                    .testTag("emailTextField")
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             // Password input field
             OutlinedTextField(
-                value = passwordState.value,
+                value = password,
                 onValueChange = {
-                    passwordState.value = it
-                    if (it.isNotEmpty()) {
-                        showError.value = false
-                        errorMessage.value = ""
-                    }
+                    password = it
+                    errorMessage = ""
                 },
                 label = { Text("Enter your password") },
                 visualTransformation = PasswordVisualTransformation(),
@@ -91,40 +69,50 @@ fun LoginScreen(navController: NavHostController) {
                     .testTag("passwordTextField")
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Show error message if there's any invalid input
-            if (showError.value) {
+
+            // Show error message if authentication fails
+            if (errorMessage.isNotEmpty()) {
                 Text(
-                    text = errorMessage.value,
+                    text = errorMessage,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .testTag("errorText")
+                    modifier = Modifier.padding(8.dp)
                 )
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Login button
             Button(
                 onClick = {
-                    // Validate username and password
-                    if (usernameState.value.trim().isEmpty() || passwordState.value.trim().isEmpty()) {
-                        showError.value = true
-                        errorMessage.value = "Please fill in both fields"
+                    if (email.trim().isEmpty() || password.trim().isEmpty()) {
+                        errorMessage = "Please fill in both fields"
                     } else {
-                        navController.navigate("personalised_screen/${usernameState.value.trim()}")
+                        isLoading = true
+                        auth.signInWithEmailAndPassword(email.trim(), password.trim())
+                            .addOnCompleteListener { task ->
+                                isLoading = false
+                                if (task.isSuccessful) {
+                                    Log.d("LoginScreen", "Login successful")
+                                    navController.navigate("personalised_screen/${email.trim()}")
+                                } else {
+                                    errorMessage = "Authentication failed: ${task.exception?.message}"
+                                    Log.e("LoginScreen", "Login failed: ${task.exception?.message}")
+                                }
+                            }
                     }
                 },
-                modifier = Modifier.testTag("loginButton")
+                modifier = Modifier.testTag("loginButton"),
+                enabled = !isLoading // Disable button while loading
             ) {
-                Text("Log In")
+                Text(if (isLoading) "Logging in..." else "Log In")
             }
+
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "Created by ZAPJOLLY for INF2007 at SIT",
                 style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("footnoteText")
+                textAlign = TextAlign.Center
             )
         }
     }
 }
-
-
