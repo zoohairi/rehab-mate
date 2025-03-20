@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
     private fun checkFirebaseConnection() {
         firestore.collection("test").get()
             .addOnSuccessListener {
-                Log.d("FirebaseConnection", "Success: Firestore are connected!")
+                Log.d("FirebaseConnection", "Success: Firestore is connected!")
             }
             .addOnFailureListener { exception ->
                 Log.e("FirebaseConnection", "Failed: ${exception.message}")
