@@ -6,24 +6,66 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.rehabmate.screens.LoginScreen
 import com.example.rehabmate.screens.PersonalisedScreen
+import com.example.rehabmate.screens.appointmentScreen
+import com.example.rehabmate.screens.editprofileScreen
+import com.example.rehabmate.screens.exerciseScreen
+import com.example.rehabmate.screens.welcomeScreen
+import com.example.rehabmate.screens.registerScreen
 //import com.example.rehabmate.screens.ProfileScreen
 
 @Composable
 fun NavGraph(
     navController: NavHostController
 ) {
-    NavHost(navController = navController, startDestination = "login_screen") {
+    NavHost(navController = navController, startDestination = "login_screen") //uncomment this to see the linking (not completely integrated)
+    //the path below is to be implemented
+//    NavHost(navController = navController, startDestination = "welcome_screen")
+    {
+
+        // Welcome screen
+        composable("welcome_screen") {
+            welcomeScreen(navController)
+        }
+
+        // Login screen
         composable("login_screen") {
             LoginScreen(navController)
         }
+
+        // Register screen (could be linked to login screen)
+        composable("register_screen") {
+            registerScreen(navController)
+        }
+
+        // User's home page
         composable("personalised_screen/{username}") { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username")
             PersonalisedScreen(navController = navController, username = username)
         }
-        composable("profile_screen/{username}") { backStackEntry ->
+
+        // Appointment screen (needs amendment for linking)
+        composable("appointment_screen") { backStackEntry ->
+            appointmentScreen(navController)
+        }
+
+        // Exercise screen
+        composable("exercise_screen") { backStackEntry ->
+            exerciseScreen(navController)
+        }
+
+        // Edit profile screen
+        composable("editProfile_screen") { backStackEntry ->
+            editprofileScreen(navController)
+        }
+
+        // Profile page (the file code is all comment -Yet to update-)
+        composable("profile_screen") { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username") ?: ""
             //ProfileScreen(navController, username)
         }
+
+
+        //================================= NOT IN USE =================================
         composable("choose_screen/{name}/{sex}/{age}/{occupation}") { backStackEntry ->
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val sex = backStackEntry.arguments?.getString("sex") ?: ""
@@ -35,7 +77,8 @@ fun NavGraph(
             val prompt = backStackEntry.arguments?.getString("prompt") ?: ""
             val username = backStackEntry.arguments?.getString("username") ?: ""
             val agentname = backStackEntry.arguments?.getString("agentname") ?: ""
-            val agentImageResId = backStackEntry.arguments?.getString("agentImageResId")?.toIntOrNull() ?: 0
+            val agentImageResId =
+                backStackEntry.arguments?.getString("agentImageResId")?.toIntOrNull() ?: 0
             //ChatScreen(navController, prompt, username, agentname, agentImageResId)
         }
     }

@@ -16,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
+    //can combine with register screen
     val auth: FirebaseAuth = FirebaseAuth.getInstance() // Firebase Authentication instance
 
     var email by remember { mutableStateOf("") }
