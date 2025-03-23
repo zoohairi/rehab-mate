@@ -2,10 +2,10 @@ package com.example.rehabmate.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val blue_color = Color(0xFF4A90E2) // Blue
+val white_color = Color(0xFFFFFFFF) // White
+val green_color = Color(0xFF3CB371) // Green
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// For validation
+val yellow_color = Color(0xFFF7C948) // Yellow
+val red_color = Color(0xFFE94E3D) // Red
