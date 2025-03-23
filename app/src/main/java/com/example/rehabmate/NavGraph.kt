@@ -9,22 +9,25 @@ import com.example.rehabmate.screens.PersonalisedScreen
 import com.example.rehabmate.screens.appointmentScreen
 import com.example.rehabmate.screens.editprofileScreen
 import com.example.rehabmate.screens.exerciseScreen
-import com.example.rehabmate.screens.welcomeScreen
+import com.example.rehabmate.screens.WelcomeScreen
 import com.example.rehabmate.screens.registerScreen
+
 //import com.example.rehabmate.screens.ProfileScreen
 
 @Composable
 fun NavGraph(
     navController: NavHostController
 ) {
-    NavHost(navController = navController, startDestination = "login_screen") //uncomment this to see the linking (not completely integrated)
+//    NavHost(
+//        navController = navController,
+//        startDestination = "login_screen"
+//    ) //uncomment this to see the linking (not completely integrated)
     //the path below is to be implemented
-//    NavHost(navController = navController, startDestination = "welcome_screen")
-    {
+    NavHost(navController = navController, startDestination = "welcome_screen") {
 
         // Welcome screen
         composable("welcome_screen") {
-            welcomeScreen(navController)
+            WelcomeScreen(navController)
         }
 
         // Login screen
