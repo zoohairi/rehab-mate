@@ -4,13 +4,23 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.rehabmate.ui.theme.RehabMateTheme
 import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
-import java.lang.Exception
 
 class MainActivity : ComponentActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
@@ -29,8 +39,10 @@ class MainActivity : ComponentActivity() {
         checkFirebaseConnection()
 
         setContent {
-            val navController = rememberNavController()
-            NavGraph(navController)
+            RehabMateTheme {
+                val navController = rememberNavController()
+                MainScreen(navController)
+            }
         }
     }
 
@@ -43,5 +55,42 @@ class MainActivity : ComponentActivity() {
                 Log.e("FirebaseConnection", "Failed: ${exception.message}")
             }
     }
+}
 
+// MainScreen encapsulates Scaffold with Bottom Navigation
+@Composable
+fun MainScreen(navController: NavHostController) {
+    Scaffold(
+        bottomBar = { BottomNavigationBar(navController) }
+    ) { innerPadding ->
+        NavGraph(
+            navController = navController,
+            modifier = Modifier.padding(innerPadding) // Ensures padding for content
+        )
+    }
+}
+
+//Bottom Navigation Bar
+@Composable
+fun BottomNavigationBar(navController: NavController) {
+    NavigationBar(containerColor = Color.White) {
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
+            label = { Text("Home") },
+            selected = false,
+            onClick = { navController.navigate("personalised_screen/{username}") }
+        )
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Search, contentDescription = "appointment") },
+            label = { Text("Appointment") },
+            selected = false,
+            onClick = { navController.navigate("appointment_screen") }
+        )
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
+            label = { Text("Profile") },
+            selected = false,
+            onClick = { navController.navigate("profile_screen") }
+        )
+    }
 }
