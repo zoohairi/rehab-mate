@@ -6,15 +6,24 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.rehabmate.screens.LoginScreen
 import com.example.rehabmate.screens.PersonalisedScreen
+import com.example.rehabmate.screens.RegisterScreen
+import com.example.rehabmate.screens.StartScreen
+
 //import com.example.rehabmate.screens.ProfileScreen
 
 @Composable
 fun NavGraph(
     navController: NavHostController
 ) {
-    NavHost(navController = navController, startDestination = "login_screen") {
+    NavHost(navController = navController, startDestination = "start_screen") {
+        composable("start_screen") {
+            StartScreen(navController)
+        }
         composable("login_screen") {
             LoginScreen(navController)
+        }
+        composable("register_screen") {
+            RegisterScreen(navController)
         }
         composable("personalised_screen/{username}") { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username")
@@ -43,6 +52,4 @@ fun NavGraph(
     //
     //    1. Start Screen (route: start_screen) → The app begins here.
     //    2, Profile Screen (route: profile_screen/{name}) → User provides profile information.
-    //    3. Choose Screen (route: choose_screen/{name}/{sex}/{age}/{occupation}) → User selects a virtual valentine.
-    //    4. Chat Screen (route: chat_screen/{prompt}/{username}/{agentname}/{agentImageResId}) → User chats with their selected valentine.
 }

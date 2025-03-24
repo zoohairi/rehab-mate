@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.navigation.compose.rememberNavController
+import com.example.rehabmate.ui.theme.RehabMateTheme
 import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
@@ -29,8 +30,10 @@ class MainActivity : ComponentActivity() {
         checkFirebaseConnection()
 
         setContent {
-            val navController = rememberNavController()
-            NavGraph(navController)
+            RehabMateTheme{
+                val navController = rememberNavController()
+                NavGraph(navController)
+            }
         }
     }
 
