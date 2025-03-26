@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.rehabmate.screens.ForgotPasswordScreen
 import com.example.rehabmate.screens.LoginScreen
 import com.example.rehabmate.screens.PersonalisedScreen
 import com.example.rehabmate.screens.RegisterScreen
@@ -24,6 +25,9 @@ fun NavGraph(
         }
         composable("register_screen") {
             RegisterScreen(navController)
+        }
+        composable("forgot_password_screen") {
+            ForgotPasswordScreen(navController)
         }
         composable("personalised_screen/{username}") { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username")

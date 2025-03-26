@@ -22,15 +22,12 @@ import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(navController: NavHostController) {
+fun ForgotPasswordScreen(navController: NavHostController) {
     val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    var name by remember { mutableStateOf("") }
-    var dob by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -60,7 +57,7 @@ fun RegisterScreen(navController: NavHostController) {
             ) {
                 // Title
                 Text(
-                    text = "CREATE AN ACCOUNT",
+                    text = "FORGOTTEN PASSWORD",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -68,11 +65,17 @@ fun RegisterScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Register Text
+                // Header Text
                 Text(
-                    text = "Register",
+                    text = "Forget Password?",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean sed arcu eget quam sagittis vehicula in eu orci.",
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -84,65 +87,52 @@ fun RegisterScreen(navController: NavHostController) {
                         .background(Color(0xFF4285F4), RoundedCornerShape(12.dp))
                         .padding(16.dp)
                 ) {
-                    TextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        placeholder = { Text("Name") },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    TextField(
-                        value = dob,
-                        onValueChange = { dob = it },
-                        placeholder = { Text("Date of Birth (DD/MM/YY)") },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                    // Email Field
                     TextField(
                         value = email,
-                        onValueChange = { email = it },
-                        placeholder = { Text("Email") },
+                        onValueChange = { email = it; errorMessage = "" },
+                        placeholder = { Text("example@example.com") },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
+                        modifier = Modifier.fillMaxWidth().testTag("emailTextField"),
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
+
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // New Password Field
                     TextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        placeholder = { Text("Password") },
+                        value = newPassword,
+                        onValueChange = { newPassword = it; errorMessage = "" },
+                        placeholder = { Text("************") },
                         visualTransformation = PasswordVisualTransformation(),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
+                        modifier = Modifier.fillMaxWidth().testTag("newPasswordTextField"),
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
+
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Confirm Password Field
                     TextField(
                         value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        placeholder = { Text("Confirm Password") },
+                        onValueChange = { confirmPassword = it; errorMessage = "" },
+                        placeholder = { Text("************") },
                         visualTransformation = PasswordVisualTransformation(),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    TextField(
-                        value = code,
-                        onValueChange = { code = it },
-                        placeholder = { Text("Code") },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
+                        modifier = Modifier.fillMaxWidth().testTag("confirmPasswordTextField"),
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
                 }
 
@@ -157,24 +147,34 @@ fun RegisterScreen(navController: NavHostController) {
                     )
                 }
 
-                // Register Button
+                // Change Password Button
                 Button(
                     onClick = {
-                        if (name.trim().isEmpty() || dob.trim().isEmpty() || email.trim().isEmpty() || password.trim().isEmpty() || confirmPassword.trim().isEmpty() || code.trim().isEmpty()) {
+                        if (email.trim().isEmpty() || newPassword.trim().isEmpty() || confirmPassword.trim().isEmpty()) {
                             errorMessage = "Please fill in all fields"
-                        } else if (password != confirmPassword) {
+                        } else if (newPassword != confirmPassword) {
                             errorMessage = "Passwords do not match"
                         } else {
                             isLoading = true
-                            // Firebase registration logic here
+                            auth.sendPasswordResetEmail(email.trim())
+                                .addOnCompleteListener { task ->
+                                    isLoading = false
+                                    if (task.isSuccessful) {
+                                        Log.d("ForgotPasswordScreen", "Password reset email sent")
+                                        navController.navigate("login")
+                                    } else {
+                                        errorMessage = "Error: ${'$'}{task.exception?.message}"
+                                        Log.e("ForgotPasswordScreen", "Error: ${'$'}{task.exception?.message}")
+                                    }
+                                }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp),
+                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp).testTag("changePasswordButton"),
                     enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(Color(0xFFE53935)) // Red color
                 ) {
                     Text(
-                        text = if (isLoading) "Registering..." else "REGISTER",
+                        text = if (isLoading) "Processing..." else "CHANGE PASSWORD",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -186,6 +186,6 @@ fun RegisterScreen(navController: NavHostController) {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewRegisterScreen() {
-    RegisterScreen(navController = rememberNavController())
+fun PreviewForgotPasswordScreen() {
+    ForgotPasswordScreen(navController = rememberNavController())
 }

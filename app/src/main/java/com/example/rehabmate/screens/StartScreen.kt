@@ -58,7 +58,7 @@ fun StartScreen(navController: NavHostController) {
 
             // Register Button
             Button(
-                onClick = { /* Navigate to Register Screen */ },
+                onClick = { navController.navigate("register_screen") },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)), // Red color
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier

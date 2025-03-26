@@ -92,7 +92,9 @@ fun LoginScreen(navController: NavHostController) {
                         onValueChange = { email = it; errorMessage = "" },
                         placeholder = { Text("example@example.com") },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("emailTextField"),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("emailTextField"),
                         colors = TextFieldDefaults.textFieldColors(
                             containerColor = Color.White,
                             focusedIndicatorColor = Color.Transparent,
@@ -109,7 +111,9 @@ fun LoginScreen(navController: NavHostController) {
                         placeholder = { Text("********") },
                         visualTransformation = PasswordVisualTransformation(),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("passwordTextField"),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("passwordTextField"),
                         colors = TextFieldDefaults.textFieldColors(
                             containerColor = Color.White,
                             focusedIndicatorColor = Color.Transparent,
@@ -117,6 +121,19 @@ fun LoginScreen(navController: NavHostController) {
                         )
                     )
                 }
+
+                // Forgot Password Link
+                Text(
+                    text = "Forgot Password?",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 8.dp, end = 16.dp)
+                        .clickable { navController.navigate("forgot_password_screen") }
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -149,7 +166,10 @@ fun LoginScreen(navController: NavHostController) {
                                 }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp).testTag("loginButton"),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(50.dp)
+                        .testTag("loginButton"),
                     enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(Color(0xFFE53935)) // Red color
                 ) {
