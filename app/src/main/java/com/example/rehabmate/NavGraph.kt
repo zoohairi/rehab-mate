@@ -25,6 +25,9 @@ fun NavGraph(
             val username = backStackEntry.arguments?.getString("username")
             PersonalisedScreen(navController, username)
         }
+        composable("forgot_password_screen") {
+            ForgotPasswordScreen(navController)
+        }
         composable("appointment_screen") { AppointmentScreen(navController) }
         composable("exercise_screen") { ExerciseScreen(navController) }
         composable("editProfile_screen") { editprofileScreen(navController) }

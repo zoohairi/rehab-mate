@@ -96,7 +96,8 @@ fun LoginScreen(navController: NavHostController) {
                                     Log.d("LoginScreen", "Login successful")
                                     navController.navigate("personalised_screen/${email.trim()}")
                                 } else {
-                                    errorMessage = "Authentication failed: ${task.exception?.message}"
+                                    errorMessage =
+                                        "Authentication failed: ${task.exception?.message}"
                                     Log.e("LoginScreen", "Login failed: ${task.exception?.message}")
                                 }
                             }
