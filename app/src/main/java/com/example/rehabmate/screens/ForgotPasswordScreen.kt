@@ -46,7 +46,8 @@ fun ForgotPasswordScreen(navController: NavHostController) {
                 fontSize = 24.sp,
                 modifier = Modifier
                     .padding(16.dp)
-                    .clickable { navController.popBackStack() })
+                    .clickable { navController.popBackStack() }
+            )
 
             Column(
                 modifier = Modifier
@@ -66,7 +67,9 @@ fun ForgotPasswordScreen(navController: NavHostController) {
 
                 // Header Text
                 Text(
-                    text = "Forget Password?", fontSize = 24.sp, fontWeight = FontWeight.Bold
+                    text = "Forget Password?",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean sed arcu eget quam sagittis vehicula in eu orci.",
@@ -93,7 +96,13 @@ fun ForgotPasswordScreen(navController: NavHostController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("emailTextField"),
+                        colors = TextFieldDefaults.textFieldColors(
+                            containerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // New Password Field
@@ -138,7 +147,9 @@ fun ForgotPasswordScreen(navController: NavHostController) {
                 // Error Message
                 if (errorMessage.isNotEmpty()) {
                     Text(
-                        text = errorMessage, color = Color.Red, modifier = Modifier.padding(8.dp)
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
 
