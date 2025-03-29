@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">RehabMate</string>
+    <string name="exerciseService_API">4pIiQIhMm7kUOUY7JnvhNg==oQqUQkB44DHmaKsd</string>
+    <string name="TTS_API">21cc98a066fd4dc2a421ec55141264e1</string>
 </resources>

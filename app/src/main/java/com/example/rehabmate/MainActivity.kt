@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -29,6 +30,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        RetrofitInstance.initialize(this)
+
 
         // Initialize Firebase only if not already initialized
         if (FirebaseApp.getApps(this).isEmpty()) {
@@ -115,6 +118,13 @@ fun BottomNavigationBar(navController: NavController) {
             label = { Text("Profile") },
             selected = false,
             onClick = { navController.navigate("profile_screen") }
+        )
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Face, contentDescription = "Exercise") },
+            label = { Text("Exercise API") },
+            selected = false,
+            onClick = { navController.navigate("exercise_screen_api") }
         )
     }
 }

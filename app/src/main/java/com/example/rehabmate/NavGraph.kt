@@ -45,6 +45,11 @@ fun NavGraph(
             SpeechScreen(navController)
         }
 
+        composable("exercise_screen_api") {
+            ExerciseApiScreen(navController)
+        }
+
+
         // Exercise Details Screens
         composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
             val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"

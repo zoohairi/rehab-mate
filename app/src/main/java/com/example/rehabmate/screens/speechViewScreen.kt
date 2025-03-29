@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.rehabmate.R
 import okhttp3.*
 import java.io.File
 import java.io.FileOutputStream
@@ -37,6 +38,9 @@ fun SpeechScreen(navController: NavController) {
     var isPlaying by remember { mutableStateOf(false) }
     var audioFile by remember { mutableStateOf<File?>(null) }
     val mediaPlayer = remember { MediaPlayer() }
+
+    val apiKey =
+        context.getString(R.string.TTS_API) // Access the API key from strings.xml
 
     Column(
         modifier = Modifier
@@ -133,7 +137,7 @@ fun SpeechScreen(navController: NavController) {
                         text.text,
                         selectedLanguage,
                         selectedVoice,
-                        "21cc98a066fd4dc2a421ec55141264e1" // API
+                        apiKey // API
                     ) { result, file ->
                         isLoading = false
                         resultMessage = result
