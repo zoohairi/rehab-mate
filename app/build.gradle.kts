@@ -61,9 +61,14 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")  // Firebase Authentication
     implementation("com.google.firebase:firebase-firestore-ktx")  // Firebase Firestore
     implementation("com.google.firebase:firebase-analytics-ktx")  // Firebase Analytics
-    
+
+    // OkHttp dependency
+    implementation("com.squareup.okhttp3:okhttp:4.9.1")
     // Gson dependency
     implementation("com.google.code.gson:gson:2.8.8")
+
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("androidx.media:media:1.6.0")
 
     // Testing libraries
     testImplementation(libs.junit)
