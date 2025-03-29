@@ -1,6 +1,6 @@
 package com.example.rehabmate.screens
 
-import android.R
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,12 +26,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.white_color
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun ExerciseScreen(navController: NavHostController) {
@@ -349,6 +352,61 @@ fun ExerciseInfoTab(navController: NavHostController) {
 
 @Composable
 fun ExerciseListTab(navController: NavHostController) {
+    val db = FirebaseFirestore.getInstance()
+    val exercises = remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    val isLoading = remember { mutableStateOf(true) }
+
+    // Fetch exercises from Firebase
+    LaunchedEffect(true) {
+        db.collection("Exercises")
+            .get()
+            .addOnSuccessListener { result ->
+                val exerciseList = mutableListOf<Map<String, Any>>()
+                val doctorNameMap =
+                    mutableMapOf<String, String>() // Map to store doctor UID and name
+
+                for (document in result) {
+                    val exercise = document.data
+                    val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
+
+                    // Fetch doctor's name if UID exists in the 'Doctors' collection
+                    val doctorNames = mutableListOf<String>()
+                    doctorInCharge.forEach { doctorUid ->
+                        // Check if doctor name is already fetched
+                        if (doctorNameMap.containsKey(doctorUid)) {
+                            doctorNames.add(doctorNameMap[doctorUid] ?: "Unknown Doctor")
+                        } else {
+                            db.collection("Doctors").document(doctorUid)
+                                .get()
+                                .addOnSuccessListener { doctorDoc ->
+                                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                                    doctorNameMap[doctorUid] = doctorName
+                                    doctorNames.add(doctorName)
+                                }
+                                .addOnFailureListener { exception ->
+                                    Log.e(
+                                        "FirebaseError",
+                                        "Error fetching doctor name: ${exception.message}"
+                                    )
+                                }
+                        }
+                    }
+
+                    // Add the exercise details along with doctor names
+                    val exerciseWithDoctors = exercise.toMutableMap()
+                    exerciseWithDoctors["doctor_names"] = doctorNames
+                    exerciseList.add(exerciseWithDoctors)
+                }
+
+                exercises.value = exerciseList
+                isLoading.value = false
+            }
+            .addOnFailureListener { exception ->
+                Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
+                isLoading.value = false
+            }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -370,13 +428,13 @@ fun ExerciseListTab(navController: NavHostController) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "[EXERCISE NAME]",
+                text = "Exercises",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        // Exercise list content
+        // Show loading or exercise list
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -384,16 +442,119 @@ fun ExerciseListTab(navController: NavHostController) {
                 .padding(vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
+            if (isLoading.value) {
+                CircularProgressIndicator() // Show loading indicator while fetching data
+            } else {
+                LazyColumn(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    items(exercises.value.size) { index ->
+                        val exercise = exercises.value[index]
+                        ExerciseItem(exercise)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun ExerciseItem(exercise: Map<String, Any>) {
+    // Safely extract values from the exercise map
+    val exerciseTitle = exercise["exercise_title"] as? String ?: "No Title"
+    val description = exercise["description"] as? String ?: "No description available."
+    val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
+    val duration = exercise["duration"] as? String ?: "No duration"
+    val remark = exercise["remark"] as? String ?: "No remarks"
+    val keywords = exercise["keyword_api"] as? Map<String, Any> ?: emptyMap()
+    val muscles = keywords["Muscle"] as? List<String> ?: emptyList()
+    val types = keywords["Type"] as? List<String> ?: emptyList()
+
+    // State to hold the doctor's names
+    val doctorNames = remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Fetch the doctor's names asynchronously
+    LaunchedEffect(doctorInCharge) {
+        val names = mutableListOf<String>()
+        val db = FirebaseFirestore.getInstance()
+        doctorInCharge.forEach { doctorUid ->
+            db.collection("Doctors").document(doctorUid)
+                .get()
+                .addOnSuccessListener { doctorDoc ->
+                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                    names.add(doctorName)
+                    if (names.size == doctorInCharge.size) {
+                        doctorNames.value = names
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
+                }
+        }
+    }
+
+    // Display exercise details
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        // Title
+        Text(
+            text = exerciseTitle,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        // Description
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        // Duration
+        Text(
+            text = "Duration: $duration",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        // Recommended by (Doctor names)
+        if (doctorNames.value.isNotEmpty()) {
             Text(
-                text = "List of Main and Sub-main exercises",
-                textAlign = TextAlign.Center,
-                color = Color.Red,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
+                text = "Recommended by: ${doctorNames.value.joinToString(", ")}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            Text(
+                text = "Recommended by: Loading...",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        // Remark
+        Text(
+            text = "Remark: $remark",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        // Muscles and exercise types if available
+        if (muscles.isNotEmpty()) {
+            Text(
+                text = "Muscles: ${muscles.joinToString(", ")}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (types.isNotEmpty()) {
+            Text(
+                text = "Exercise Types: ${types.joinToString(", ")}",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 }
+
 
 @Composable
 fun ExerciseDemoTab(navController: NavHostController) {

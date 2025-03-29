@@ -48,28 +48,47 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom)) // This includes all Compose dependencies
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3) // Material3 for Compose
+    implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
 
     // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))  // Firebase BoM for version management
-    implementation("com.google.firebase:firebase-auth-ktx")  // Firebase Authentication
-    implementation("com.google.firebase:firebase-firestore-ktx")  // Firebase Firestore
-    implementation("com.google.firebase:firebase-analytics-ktx")  // Firebase Analytics
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0")) // Use latest BOM version
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
 
-    // Material Components dependency (legacy material library)
-    implementation("com.google.android.material:material:1.7.0")
+    // Google Play Services
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-base:18.3.0")
+
+    // OkHttp dependency
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
+
+    // Gson & Moshi JSON Parsers
+    implementation("com.google.code.gson:gson:2.8.9")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+
+    //retro and gson
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
+
+
+    implementation("androidx.appcompat:appcompat:1.6.1")  // time of writing
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4") //  constraint layout
 
     // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom)) // To use Compose in tests
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
