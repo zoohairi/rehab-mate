@@ -3,8 +3,11 @@ package com.example.rehabmate
 import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.example.rehabmate.R
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class CountdownActivity : AppCompatActivity() {
 
@@ -17,7 +20,7 @@ class CountdownActivity : AppCompatActivity() {
         val textView: TextView = findViewById(R.id.textViewCountdown)
 
         // Start countdown in Coroutine
-        startCountdown(10, textView)
+        startCountdown(5, textView)
     }
 
     private fun startCountdown(seconds: Int, textView: TextView) {
