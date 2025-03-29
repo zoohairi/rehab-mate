@@ -30,13 +30,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Firebase
-        FirebaseApp.initializeApp(this)
+        // Initialize Firebase only if not already initialized
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            FirebaseApp.initializeApp(this)
+            Log.d("Firebase", "Firebase initialized")
+        } else {
+            Log.d("Firebase", "Firebase is already initialized")
+        }
+
+        // Initialize Firebase services
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         auth = FirebaseAuth.getInstance()
         firestore = FirebaseFirestore.getInstance()
 
+        // Check Firestore connection
         checkFirebaseConnection()
+
+        // Check Authentication status
+        checkAuthStatus()
 
         setContent {
             RehabMateTheme {
@@ -47,13 +58,26 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkFirebaseConnection() {
-        firestore.collection("test").get()
-            .addOnSuccessListener {
-                Log.d("FirebaseConnection", "Success: Firestore is connected!")
-            }
-            .addOnFailureListener { exception ->
-                Log.e("FirebaseConnection", "Failed: ${exception.message}")
-            }
+        try {
+            firestore.collection("test").get()
+                .addOnSuccessListener {
+                    Log.d("FirebaseConnection", "Success: Firestore is connected!")
+                }
+                .addOnFailureListener { exception ->
+                    Log.e("FirebaseConnection", "Failed: ${exception.message}")
+                }
+        } catch (e: Exception) {
+            Log.e("FirebaseConnection", "Error occurred: ${e.message}")
+        }
+    }
+
+    private fun checkAuthStatus() {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            Log.d("FirebaseAuth", "User is logged in: ${currentUser.uid}")
+        } else {
+            Log.d("FirebaseAuth", "No user is logged in")
+        }
     }
 }
 

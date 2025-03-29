@@ -57,18 +57,24 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))  // Firebase BoM for version management
-    implementation("com.google.firebase:firebase-auth-ktx")  // Firebase Authentication
-    implementation("com.google.firebase:firebase-firestore-ktx")  // Firebase Firestore
-    implementation("com.google.firebase:firebase-analytics-ktx")  // Firebase Analytics
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0")) // Use latest BOM version
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
+
+    // Google Play Services
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-base:18.3.0")
 
     // OkHttp dependency
-    implementation("com.squareup.okhttp3:okhttp:4.9.1")
-    // Gson dependency
-    implementation("com.google.code.gson:gson:2.8.8")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
-    implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation("androidx.media:media:1.6.0")
+
+    // Gson & Moshi JSON Parsers
+    implementation("com.google.code.gson:gson:2.8.9")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+
 
     // Testing libraries
     testImplementation(libs.junit)
