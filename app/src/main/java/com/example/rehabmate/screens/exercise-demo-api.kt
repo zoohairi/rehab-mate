@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,14 +34,14 @@ import retrofit2.Response
 fun ExerciseApiScreen(navController: NavController) {
     var exercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }  // Handle error message
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Fetch exercises when screen is loaded
     LaunchedEffect(Unit) {
         fetchExercises("biceps") { fetchedExercises, error ->
             exercises = fetchedExercises
             loading = false
-            errorMessage = error // Capture error message if any
+            errorMessage = error
         }
     }
 
@@ -65,7 +66,10 @@ fun ExerciseApiScreen(navController: NavController) {
                         contentPadding = PaddingValues(16.dp)
                     ) {
                         items(exercises) { exercise ->
-                            ExerciseItem(exercise)
+                            ExerciseItem(exercise) { instructions ->
+                                // Pass the instructions to SpeechScreen
+                                navController.navigate("speechScreen/$instructions")
+                            }
                         }
                     }
                 }
@@ -75,7 +79,7 @@ fun ExerciseApiScreen(navController: NavController) {
 }
 
 @Composable
-fun ExerciseItem(exercise: Exercise) {
+fun ExerciseItem(exercise: Exercise, onSelect: (String) -> Unit) {
     Card(
         modifier = Modifier.padding(vertical = 8.dp)
     ) {
@@ -86,9 +90,20 @@ fun ExerciseItem(exercise: Exercise) {
             Text(text = "Difficulty: ${exercise.difficulty}")
             Text(text = "Equipment: ${exercise.equipment}")
             Text(text = "Instructions: ${exercise.instructions}")
+
+            // Button to trigger speech generation
+            Button(
+                onClick = {
+                    // When button is clicked, pass the instructions to SpeechScreen
+                    onSelect(exercise.instructions)
+                }
+            ) {
+                Text("Read Instructions")
+            }
         }
     }
 }
+
 
 // Retrofit API call setup
 fun fetchExercises(muscle: String, callback: (List<Exercise>, String?) -> Unit) {

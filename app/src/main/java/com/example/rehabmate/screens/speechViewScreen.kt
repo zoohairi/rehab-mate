@@ -3,44 +3,55 @@ package com.example.rehabmate.screens
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallTopAppBar
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.rehabmate.R
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URLEncoder
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SpeechScreen(navController: NavController) {
-    var text by remember { mutableStateOf(TextFieldValue()) }
+@OptIn(ExperimentalMaterial3Api::class)
+fun SpeechScreen(navController: NavController, instructions: String) {
     var isLoading by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
-    val context = LocalContext.current
-
-    // Voice and language selection state
-    var selectedLanguage by remember { mutableStateOf("en-us") }
-    var selectedVoice by remember { mutableStateOf("Linda") }
-
-    // Audio playback state
-    var isPlaying by remember { mutableStateOf(false) }
     var audioFile by remember { mutableStateOf<File?>(null) }
+    var isPlaying by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val mediaPlayer = remember { MediaPlayer() }
 
-    val apiKey =
-        context.getString(R.string.TTS_API) // Access the API key from strings.xml
+    val apiKey = context.getString(R.string.TTS_API)
 
     Column(
         modifier = Modifier
@@ -54,7 +65,6 @@ fun SpeechScreen(navController: NavController) {
             title = { Text("Text to Speech") },
             navigationIcon = {
                 IconButton(onClick = { navController.navigateUp() }) {
-                    // You can replace this with your back icon
                     Text("Back")
                 }
             },
@@ -63,66 +73,11 @@ fun SpeechScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Language selection dropdown
-        ExposedDropdownMenuBox(
-            expanded = false, // You would need state for this
-            onExpandedChange = { /* Handle expansion */ },
+        // Display instructions
+        Text(
+            text = "Instructions: $instructions",
+            style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.fillMaxWidth()
-        ) {
-            TextField(
-                value = "English (United States)",
-                onValueChange = { },
-                readOnly = true,
-                label = { Text("Language") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = false)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-
-            // You would implement the dropdown menu items here
-            // This is a placeholder
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Voice selection dropdown
-        ExposedDropdownMenuBox(
-            expanded = false, // You would need state for this
-            onExpandedChange = { /* Handle expansion */ },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextField(
-                value = selectedVoice,
-                onValueChange = { },
-                readOnly = true,
-                label = { Text("Voice") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = false)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-
-            // You would implement the dropdown menu items here
-            // This is a placeholder
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Text input field
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Enter text to convert to speech") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Text
-            ),
-            keyboardActions = KeyboardActions.Default
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -130,23 +85,21 @@ fun SpeechScreen(navController: NavController) {
         // Generate Speech button
         Button(
             onClick = {
-                if (text.text.isNotEmpty()) {
-                    isLoading = true
-                    generateSpeech(
-                        context,
-                        text.text,
-                        selectedLanguage,
-                        selectedVoice,
-                        apiKey // API
-                    ) { result, file ->
-                        isLoading = false
-                        resultMessage = result
-                        audioFile = file
-                    }
+                isLoading = true
+                generateSpeech(
+                    context,
+                    instructions,
+                    "en-us", // Example language
+                    "Linda", // Example voice
+                    apiKey
+                ) { result, file ->
+                    isLoading = false
+                    resultMessage = result
+                    audioFile = file
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && text.text.isNotEmpty()
+            enabled = !isLoading && instructions.isNotEmpty()
         ) {
             Text("Generate Speech")
         }
@@ -238,7 +191,7 @@ private fun generateSpeech(
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
             // Run on the main thread
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
+            Handler(Looper.getMainLooper()).post {
                 callback("Failed to generate speech: ${e.message}", null)
             }
         }
@@ -251,7 +204,7 @@ private fun generateSpeech(
 
                     if (contentType.contains("text/plain")) {
                         val errorMessage = response.body?.string() ?: "Unknown error"
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        Handler(Looper.getMainLooper()).post {
                             callback("Error: $errorMessage", null)
                         }
                         return
@@ -268,22 +221,22 @@ private fun generateSpeech(
                         }
 
                         // Run on the main thread
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        Handler(Looper.getMainLooper()).post {
                             callback("Speech generated successfully", file)
                         }
                     } else {
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        Handler(Looper.getMainLooper()).post {
                             callback("Empty response from server", null)
                         }
                     }
                 } catch (e: Exception) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    Handler(Looper.getMainLooper()).post {
                         callback("Error processing response: ${e.message}", null)
                     }
                 }
             } else {
                 val errorBody = response.body?.string() ?: "No error details"
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Handler(Looper.getMainLooper()).post {
                     callback("Failed to generate speech: ${response.code}, $errorBody", null)
                 }
             }

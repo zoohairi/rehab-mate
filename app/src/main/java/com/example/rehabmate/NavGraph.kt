@@ -40,10 +40,13 @@ fun NavGraph(
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
 
+        //FOR TESTING API PURPOSE
         // Speech Screen - Using the proper Composable function
-        composable("speech_screen") {
-            SpeechScreen(navController)
+        composable("speechScreen/{instructions}") { backStackEntry ->
+            val instructions = backStackEntry.arguments?.getString("instructions") ?: ""
+            SpeechScreen(navController, instructions)
         }
+
 
         composable("exercise_screen_api") {
             ExerciseApiScreen(navController)
