@@ -81,6 +81,9 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
 
 
+    implementation("androidx.appcompat:appcompat:1.6.1")  // time of writing
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4") //  constraint layout
+
     // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

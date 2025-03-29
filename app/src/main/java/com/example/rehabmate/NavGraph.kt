@@ -15,7 +15,7 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "welcome_screen",
+        startDestination = "CountdownScreen",
         modifier = modifier
     ) {
         // Authentication Screens
@@ -40,23 +40,24 @@ fun NavGraph(
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
 
-        //FOR TESTING API PURPOSE
+        // FOR TESTING API PURPOSE
         // Speech Screen - Using the proper Composable function
         composable("speechScreen/{instructions}") { backStackEntry ->
             val instructions = backStackEntry.arguments?.getString("instructions") ?: ""
             SpeechScreen(navController, instructions)
         }
 
-
         composable("exercise_screen_api") {
             ExerciseApiScreen(navController)
         }
-
 
         // Exercise Details Screens
         composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
             val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"
             ExerciseDemoScreen(navController)
         }
+
+        // timer countdown screen
+        composable("CountdownScreen") { CountdownScreen(navController) } // Make sure the route is correct here
     }
 }
