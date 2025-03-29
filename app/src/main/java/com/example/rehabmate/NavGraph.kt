@@ -15,7 +15,7 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "welcome_screen",
+        startDestination = "speech_screen",
         modifier = modifier
     ) {
         // Authentication Screens
@@ -39,6 +39,11 @@ fun NavGraph(
         composable("exercise_screen") { ExerciseScreen(navController) }
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
+
+        // Speech Screen - Using the proper Composable function
+        composable("speech_screen") {
+            SpeechScreen(navController)
+        }
 
         // Exercise Details Screens
         composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
