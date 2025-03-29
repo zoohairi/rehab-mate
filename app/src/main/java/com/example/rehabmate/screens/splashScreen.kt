@@ -1,12 +1,10 @@
 package com.example.rehabmate.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,7 +13,7 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 
 @Composable
-fun WelcomeScreen(navController: NavHostController) {
+fun splashScreen(navController: NavHostController) {
     // Use remember to hold the mutable state of the countdown timer
     val timeRemaining = remember { mutableIntStateOf(10) } // Starting countdown time
 
@@ -40,8 +38,8 @@ fun WelcomeScreen(navController: NavHostController) {
         )
 
         // Once countdown finishes, show the button to proceed
-        if (timeRemaining.value == 0) {
-            navController.navigate("login_screen") // Navigate to login_screen after countdown finishes
+        if (timeRemaining.intValue == 0) {
+            navController.navigate("login_screen")
         }
     }
 }

@@ -15,7 +15,7 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "WelcomeScreen",
+        startDestination = "welcome_screen",
         modifier = modifier
     ) {
         // Authentication Screens
