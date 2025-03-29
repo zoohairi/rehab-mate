@@ -5,6 +5,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -14,9 +15,9 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 
 @Composable
-fun CountdownScreen(navController: NavHostController) {
+fun WelcomeScreen(navController: NavHostController) {
     // Use remember to hold the mutable state of the countdown timer
-    val timeRemaining = remember { mutableStateOf(10) } // Starting countdown time
+    val timeRemaining = remember { mutableIntStateOf(10) } // Starting countdown time
 
     // Countdown effect using LaunchedEffect
     LaunchedEffect(timeRemaining.value) {
@@ -34,7 +35,7 @@ fun CountdownScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Time remaining: ${timeRemaining.value} seconds",
+            text = "Welcome to RehabMate",
             style = androidx.compose.material3.MaterialTheme.typography.headlineLarge
         )
 

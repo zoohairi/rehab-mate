@@ -15,7 +15,7 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "CountdownScreen",
+        startDestination = "WelcomeScreen",
         modifier = modifier
     ) {
         // Authentication Screens
@@ -57,7 +57,5 @@ fun NavGraph(
             ExerciseDemoScreen(navController)
         }
 
-        // timer countdown screen
-        composable("CountdownScreen") { CountdownScreen(navController) } // Make sure the route is correct here
     }
 }
