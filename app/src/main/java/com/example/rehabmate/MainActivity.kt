@@ -75,13 +75,13 @@ fun MainScreen(navController: NavHostController) {
 fun BottomNavigationBar(navController: NavController) {
     NavigationBar(containerColor = Color.White) {
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-            label = { Text("Home") },
+            icon = { Icon(Icons.Filled.Home, contentDescription = "Exercise") },
+            label = { Text("Exercise") },
             selected = false,
-            onClick = { navController.navigate("personalised_screen/{username}") }
+            onClick = { navController.navigate("exercise_screen") }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Search, contentDescription = "appointment") },
+            icon = { Icon(Icons.Filled.Search, contentDescription = "Appointment") },
             label = { Text("Appointment") },
             selected = false,
             onClick = { navController.navigate("appointment_screen") }

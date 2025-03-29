@@ -18,6 +18,7 @@ fun NavGraph(
         startDestination = "welcome_screen",
         modifier = modifier
     ) {
+        // Authentication Screens
         composable("welcome_screen") { WelcomeScreen(navController) }
         composable("login_screen") { LoginScreen(navController) }
         composable("register_screen") { RegisterScreen(navController) }
@@ -28,9 +29,21 @@ fun NavGraph(
         composable("forgot_password_screen") {
             ForgotPasswordScreen(navController)
         }
+
+        // Main App Screens
         composable("appointment_screen") { AppointmentScreen(navController) }
-        composable("exercise_screen") { ExerciseScreen(navController) }
-        composable("editProfile_screen") { editprofileScreen(navController) }
         composable("profile_screen") { ProfileScreen(navController) }
+        composable("editProfile_screen") { editprofileScreen(navController) }
+
+        // Exercise Screens
+        composable("exercise_screen") { ExerciseScreen(navController) }
+        composable("favorites_screen") { FavoritesScreen(navController) }
+        composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
+
+        // Exercise Details Screens
+        composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
+            val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"
+            ExerciseDemoScreen(navController)
+        }
     }
 }
