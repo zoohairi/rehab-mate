@@ -102,24 +102,30 @@ fun HomeTab(navController: NavHostController) {
     LaunchedEffect(uid) {
         if (uid != null) {
             fetchUserAndExercises(uid = uid, onSuccess = { userData, exercises ->
-                // Fetch user name based on the collection source
-                if (userData.containsKey("name")) {
-                    userName.value = userData["name"] as? String
-                } else if (userData.containsKey("profile")) {
-                    val profile = userData["profile"] as? Map<String, Any>
-                    userName.value = profile?.get("name") as? String
+                // Extract user name from the userData map
+                userName.value = when {
+                    userData.containsKey("name") -> userData["name"] as? String
+
+                    userData.containsKey("profile") -> {
+                        val profile = userData["profile"] as? Map<String, Any>
+                        profile?.get("name") as? String
+                    }
+
+                    else -> "User"
                 }
+
                 // Set exercises data
                 exerciseList.value = exercises
 
-                // Log the contents of exerciseList
+                // Debug log the contents of exerciseList
                 Log.d("HomeTab", "Exercises List: ${exerciseList.value}")
 
                 // Set loading state to false
                 isLoading.value = false
             }, onFailure = { errorMessage ->
                 // Handle error (e.g., show a message or default to a placeholder)
-                userName.value = "Error fetching user name"
+                Log.e("HomeTab", "Error fetching data: $errorMessage")
+                userName.value = "User"
                 exerciseList.value = emptyList() // Empty list in case of error
                 isLoading.value = false
             })
@@ -193,6 +199,7 @@ fun HomeTab(navController: NavHostController) {
                             }
                         }
                     }
+
                     // Feature cards section
                     Row(
                         modifier = Modifier
@@ -263,7 +270,7 @@ fun HomeTab(navController: NavHostController) {
                                 tint = white_color,
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .clickable { /* Handle back navigation */ })
+                                    .clickable { /* Handle click */ })
                         }
                     }
                 }
@@ -283,16 +290,41 @@ fun HomeTab(navController: NavHostController) {
                     } else {
                         items(exerciseList.value.size) { index ->
                             val exercise = exerciseList.value[index]
-                            val title = exercise["exercise_title"] as? String ?: "No Title"
+
+                            // Extract exercise information from the nested structure
+                            val exerciseMap = exercise["exercise"] as? Map<String, Any>
+                            val title = when {
+                                exerciseMap != null && exerciseMap.containsKey("exercise_title") -> exerciseMap["exercise_title"] as? String
+                                    ?: "No Title"
+
+                                exercise.containsKey("exercise_title") -> exercise["exercise_title"] as? String
+                                    ?: "No Title"
+
+                                else -> "No Title"
+                            }
+
                             val description = exercise["description"] as? String ?: "No Description"
+                            val remark = when {
+                                exerciseMap != null && exerciseMap.containsKey("remark") -> exerciseMap["remark"] as? String
+
+                                exercise.containsKey("remark") -> exercise["remark"] as? String
+
+                                else -> null
+                            } ?: description
 
                             ExerciseItem(
-                                title = title,
-                                subtitle = description,
-                                onClick = { /* Navigate to detail or demo */ })
+                                title = title, subtitle = remark, onClick = {
+                                    // Navigate to exercise detail with the exercise ID
+                                    val exerciseId = exercise["id"] as? String
+                                    if (exerciseId != null) {
+                                        // You can navigate to a detail screen with the ID
+                                        // navController.navigate("exerciseDetail/$exerciseId")
+                                    }
+                                })
                         }
                     }
                 }
+
                 // Continue Exercise section
                 Row(
                     modifier = Modifier
@@ -320,7 +352,7 @@ fun HomeTab(navController: NavHostController) {
                             tint = white_color,
                             modifier = Modifier
                                 .size(24.dp)
-                                .clickable { /* Handle back navigation */ })
+                                .clickable { /* Handle click */ })
                     }
                 }
 
@@ -349,7 +381,6 @@ fun HomeTab(navController: NavHostController) {
         }
     }
 }
-
 
 @Composable
 fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
@@ -560,14 +591,14 @@ fun AllExerciseItem(exercise: Map<String, Any>) {
         val db = FirebaseFirestore.getInstance()
         doctorInCharge.forEach { doctorUid ->
             db.collection("Doctors").document(doctorUid).get().addOnSuccessListener { doctorDoc ->
-                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                    names.add(doctorName)
-                    if (names.size == doctorInCharge.size) {
-                        doctorNames.value = names
-                    }
-                }.addOnFailureListener { exception ->
-                    Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
+                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                names.add(doctorName)
+                if (names.size == doctorInCharge.size) {
+                    doctorNames.value = names
                 }
+            }.addOnFailureListener { exception ->
+                Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
+            }
         }
     }
 
@@ -684,47 +715,46 @@ fun ExerciseListTab(navController: NavHostController) {
     // Fetch exercises from Firebase
     LaunchedEffect(true) {
         db.collection("Exercises").get().addOnSuccessListener { result ->
-                val exerciseList = mutableListOf<Map<String, Any>>()
-                val doctorNameMap =
-                    mutableMapOf<String, String>() // Map to store doctor UID and name
+            val exerciseList = mutableListOf<Map<String, Any>>()
+            val doctorNameMap = mutableMapOf<String, String>() // Map to store doctor UID and name
 
-                for (document in result) {
-                    val exercise = document.data
-                    val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
+            for (document in result) {
+                val exercise = document.data
+                val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
 
-                    // Fetch doctor's name if UID exists in the 'Doctors' collection
-                    val doctorNames = mutableListOf<String>()
-                    doctorInCharge.forEach { doctorUid ->
-                        // Check if doctor name is already fetched
-                        if (doctorNameMap.containsKey(doctorUid)) {
-                            doctorNames.add(doctorNameMap[doctorUid] ?: "Unknown Doctor")
-                        } else {
-                            db.collection("Doctors").document(doctorUid).get()
-                                .addOnSuccessListener { doctorDoc ->
-                                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                                    doctorNameMap[doctorUid] = doctorName
-                                    doctorNames.add(doctorName)
-                                }.addOnFailureListener { exception ->
-                                    Log.e(
-                                        "FirebaseError",
-                                        "Error fetching doctor name: ${exception.message}"
-                                    )
-                                }
-                        }
+                // Fetch doctor's name if UID exists in the 'Doctors' collection
+                val doctorNames = mutableListOf<String>()
+                doctorInCharge.forEach { doctorUid ->
+                    // Check if doctor name is already fetched
+                    if (doctorNameMap.containsKey(doctorUid)) {
+                        doctorNames.add(doctorNameMap[doctorUid] ?: "Unknown Doctor")
+                    } else {
+                        db.collection("Doctors").document(doctorUid).get()
+                            .addOnSuccessListener { doctorDoc ->
+                                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                                doctorNameMap[doctorUid] = doctorName
+                                doctorNames.add(doctorName)
+                            }.addOnFailureListener { exception ->
+                                Log.e(
+                                    "FirebaseError",
+                                    "Error fetching doctor name: ${exception.message}"
+                                )
+                            }
                     }
-
-                    // Add the exercise details along with doctor names
-                    val exerciseWithDoctors = exercise.toMutableMap()
-                    exerciseWithDoctors["doctor_names"] = doctorNames
-                    exerciseList.add(exerciseWithDoctors)
                 }
 
-                exercises.value = exerciseList
-                isLoading.value = false
-            }.addOnFailureListener { exception ->
-                Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
-                isLoading.value = false
+                // Add the exercise details along with doctor names
+                val exerciseWithDoctors = exercise.toMutableMap()
+                exerciseWithDoctors["doctor_names"] = doctorNames
+                exerciseList.add(exerciseWithDoctors)
             }
+
+            exercises.value = exerciseList
+            isLoading.value = false
+        }.addOnFailureListener { exception ->
+            Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
+            isLoading.value = false
+        }
     }
 
     Column(
@@ -796,14 +826,14 @@ fun ExerciseItem(exercise: Map<String, Any>) {
         val db = FirebaseFirestore.getInstance()
         doctorInCharge.forEach { doctorUid ->
             db.collection("Doctors").document(doctorUid).get().addOnSuccessListener { doctorDoc ->
-                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                    names.add(doctorName)
-                    if (names.size == doctorInCharge.size) {
-                        doctorNames.value = names
-                    }
-                }.addOnFailureListener { exception ->
-                    Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
+                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                names.add(doctorName)
+                if (names.size == doctorInCharge.size) {
+                    doctorNames.value = names
                 }
+            }.addOnFailureListener { exception ->
+                Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
+            }
         }
     }
 

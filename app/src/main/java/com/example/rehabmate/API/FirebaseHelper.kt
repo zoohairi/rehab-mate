@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.core.content.edit
 import com.google.firebase.firestore.QuerySnapshot
+import kotlinx.coroutines.tasks.await
 
 // Firebase authentication
 fun loginUser(
@@ -62,14 +63,22 @@ fun fetchExercisesForUser(
     onSuccess: (List<Map<String, Any>>) -> Unit,
     onFailure: (String) -> Unit
 ) {
-    val db = FirebaseFirestore.getInstance()
+    if (exerciseCodes.isEmpty()) {
+        onSuccess(emptyList())
+        return
+    }
 
+    val db = FirebaseFirestore.getInstance()
     val exerciseList = mutableListOf<Map<String, Any>>()
+    var completedCount = 0
+    var hasError = false
 
     // Fetch exercises using the list of 'code' (exercise uid)
     exerciseCodes.forEach { code ->
         db.collection("Exercises").document(code).get()
             .addOnSuccessListener { exerciseDoc ->
+                if (hasError) return@addOnSuccessListener
+
                 if (exerciseDoc.exists()) {
                     val exerciseData = exerciseDoc.data ?: emptyMap()
                     val doctorInCharge =
@@ -79,36 +88,63 @@ fun fetchExercisesForUser(
                     fetchDoctorsInfo(doctorInCharge) { doctorData ->
                         val exerciseWithDoctors = exerciseData.toMutableMap()
                         exerciseWithDoctors["doctors"] = doctorData
+                        exerciseWithDoctors["id"] = code  // Add the exercise ID for reference
                         exerciseList.add(exerciseWithDoctors)
+
+                        completedCount++
+                        if (completedCount == exerciseCodes.size) {
+                            onSuccess(exerciseList)
+                        }
+                    }
+                } else {
+                    completedCount++
+                    if (completedCount == exerciseCodes.size) {
+                        onSuccess(exerciseList)
                     }
                 }
             }
             .addOnFailureListener { exception ->
-                onFailure("Error fetching exercise: ${exception.message}")
+                if (!hasError) {
+                    hasError = true
+                    onFailure("Error fetching exercise: ${exception.message}")
+                }
             }
     }
-
-    // If all exercises have been fetched, return the list
-    onSuccess(exerciseList)
 }
 
 // Fetch doctor info based on the doctor UID
 fun fetchDoctorsInfo(doctorUids: List<String>, onSuccess: (List<Map<String, Any>>) -> Unit) {
-    val db = FirebaseFirestore.getInstance()
+    if (doctorUids.isEmpty()) {
+        onSuccess(emptyList())
+        return
+    }
 
+    val db = FirebaseFirestore.getInstance()
     val doctorList = mutableListOf<Map<String, Any>>()
+    var completedCount = 0
 
     doctorUids.forEach { uid ->
         db.collection("Doctors").document(uid).get()
             .addOnSuccessListener { doctorDoc ->
                 if (doctorDoc.exists()) {
-                    doctorList.add(doctorDoc.data ?: emptyMap())
+                    val doctorData = doctorDoc.data?.toMutableMap() ?: mutableMapOf()
+                    doctorData["id"] = uid  // Add the doctor ID for reference
+                    doctorList.add(doctorData)
+                }
+
+                completedCount++
+                if (completedCount == doctorUids.size) {
+                    onSuccess(doctorList)
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Even on failure, we need to count it as completed
+                completedCount++
+                if (completedCount == doctorUids.size) {
+                    onSuccess(doctorList)
                 }
             }
     }
-
-    // After fetching all doctor data, pass it to the callback
-    onSuccess(doctorList)
 }
 
 // Function to fetch user and exercises data (combined)
@@ -133,7 +169,7 @@ fun fetchUserAndExercises(
 // Function to store UID in SharedPreferences
 fun storeUidInSharedPreferences(uid: String, context: Context) {
     val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-    sharedPreferences.edit() {
+    sharedPreferences.edit {
         putString("user_uid", uid)
     }
 }
@@ -142,4 +178,16 @@ fun storeUidInSharedPreferences(uid: String, context: Context) {
 fun getUidFromSharedPreferences(context: Context): String? {
     val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
     return sharedPreferences.getString("user_uid", null)
+}
+
+// New utility function to check if user is logged in
+fun isUserLoggedIn(): Boolean {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    return currentUser != null
+}
+
+// New utility function to log out user
+fun logoutUser(onComplete: () -> Unit) {
+    FirebaseAuth.getInstance().signOut()
+    onComplete()
 }
