@@ -1,5 +1,6 @@
 package com.example.rehabmate.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,7 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.updateUserProfile
+import com.example.rehabmate.ui.theme.blue_color
+import com.example.rehabmate.ui.theme.green_color
+import com.example.rehabmate.ui.theme.red_color
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,12 +28,39 @@ import com.google.firebase.auth.FirebaseAuth
 fun editprofileScreen(navController: NavHostController) {
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
+    var uid: String? = null
+    /// mutableState variables for user information
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var birthDate by remember { mutableStateOf("") }
 
-    var name by remember { mutableStateOf(currentUser?.displayName ?: "John Lim") }
-    var email by remember { mutableStateOf(currentUser?.email ?: "johnlim@gmail.com") }
-    var phone by remember { mutableStateOf("0412 111 222") }
-    var address by remember { mutableStateOf("123 Main St, Sydney NSW 2000") }
-    var birthDate by remember { mutableStateOf("01/01/1995") }
+    if (currentUser != null) {
+        uid = currentUser.uid
+        Log.d("User UID", "The UID of the current user is: $uid")
+    } else {
+        Log.d("User UID", "No user is currently logged in.")
+    }
+
+    // function to fetch user info
+    LaunchedEffect(uid) {
+        fetchUserInfo(uid.toString(), onSuccess = { userData, exerciseCodes ->
+            Log.d("userinfo", userData.toString())
+
+            // Update state variables with the fetched data
+            val profile = userData["profile"] as? Map<String, Any> ?: emptyMap()
+
+            //  extract values from the profile map
+            name = userData["name"] as? String ?: "Not stated"
+            email = userData["email"] as? String ?: "Not stated"
+            phone = profile["phone_number"] as? String ?: "Not stated"
+            address = profile["address"] as? String ?: "Not stated"
+            birthDate = profile["date"] as? String ?: "Not stated"
+        }, onFailure = { errorMessage ->
+            Log.e("UserInfo", errorMessage)
+        })
+    }
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
@@ -37,13 +69,13 @@ fun editprofileScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(Color.Black)
     ) {
         // Top Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF2196F3))
+                .background(blue_color)
                 .padding(16.dp)
         ) {
             Icon(
@@ -53,8 +85,7 @@ fun editprofileScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp)
-            )
+                    .size(24.dp))
 
             Text(
                 text = "EDIT PROFILE",
@@ -74,7 +105,7 @@ fun editprofileScreen(navController: NavHostController) {
             if (successMessage.isNotEmpty()) {
                 Text(
                     text = successMessage,
-                    color = Color.Green,
+                    color = green_color,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -84,7 +115,7 @@ fun editprofileScreen(navController: NavHostController) {
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
-                    color = Color.Red,
+                    color = red_color,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -132,10 +163,7 @@ fun editprofileScreen(navController: NavHostController) {
 
             // Phone Field
             Text(
-                "Phone Number",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                "Phone Number", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
             )
             TextField(
                 value = phone,
@@ -173,10 +201,7 @@ fun editprofileScreen(navController: NavHostController) {
 
             // Birth Date Field
             Text(
-                "Date of Birth",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                "Date of Birth", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
             )
             TextField(
                 value = birthDate,
@@ -219,8 +244,7 @@ fun editprofileScreen(navController: NavHostController) {
                             onFailure = { error ->
                                 isLoading = false
                                 errorMessage = error
-                            }
-                        )
+                            })
                     } else {
                         isLoading = false
                         errorMessage = "User not logged in"
@@ -229,13 +253,12 @@ fun editprofileScreen(navController: NavHostController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                colors = ButtonDefaults.buttonColors(containerColor = red_color),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        color = Color.White, modifier = Modifier.size(24.dp)
                     )
                 } else {
                     Text("SAVE CHANGES", color = Color.White, fontWeight = FontWeight.Bold)
