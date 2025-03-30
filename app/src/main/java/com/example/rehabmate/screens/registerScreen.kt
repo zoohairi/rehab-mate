@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.rehabmate.firebase.registerUser
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -168,7 +169,25 @@ fun RegisterScreen(navController: NavHostController) {
                             errorMessage = "Passwords do not match"
                         } else {
                             isLoading = true
-                            // Firebase registration logic here
+                            // Call registerUser to register the user
+                            registerUser(
+                                email = email,
+                                password = password,
+                                name = name,
+                                birthDate = dob,
+                                phoneNumber = code,
+                                address = "", // You can add address if required
+                                context = navController.context, // Pass context for SharedPreferences
+                                onSuccess = { uid ->
+                                    isLoading = false
+                                    // Navigate to next screen after successful registration
+                                    navController.navigate("dashboard_screen")
+                                },
+                                onFailure = { errorMsg ->
+                                    isLoading = false
+                                    errorMessage = errorMsg
+                                }
+                            )
                         }
                     },
                     modifier = Modifier
@@ -187,6 +206,7 @@ fun RegisterScreen(navController: NavHostController) {
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

@@ -2,61 +2,51 @@ package com.example.rehabmate.firebase
 
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.core.content.edit
-import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
-import kotlinx.coroutines.tasks.await
 
 // Firebase authentication
 fun loginUser(
-    email: String,
-    password: String,
-    onSuccess: (String) -> Unit,
-    onFailure: (String) -> Unit
+    email: String, password: String, onSuccess: (String) -> Unit, onFailure: (String) -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
-    auth.signInWithEmailAndPassword(email, password)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val uid = auth.currentUser?.uid
-                if (uid != null) {
-                    onSuccess(uid)
-                } else {
-                    onFailure("Authentication failed: No UID found")
-                }
+    auth.signInWithEmailAndPassword(email, password).addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            val uid = auth.currentUser?.uid
+            if (uid != null) {
+                onSuccess(uid)
             } else {
-                onFailure("Authentication failed: ${task.exception?.message}")
+                onFailure("Authentication failed: No UID found")
             }
+        } else {
+            onFailure("Authentication failed: ${task.exception?.message}")
         }
+    }
 }
 
 // Function to fetch user info and activity from 'user_info'
 fun fetchUserInfo(
-    uid: String,
-    onSuccess: (Map<String, Any>, List<String>) -> Unit,
-    onFailure: (String) -> Unit
+    uid: String, onSuccess: (Map<String, Any>, List<String>) -> Unit, onFailure: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
 
-    db.collection("user_info").document(uid).get()
-        .addOnSuccessListener { userDoc ->
-            if (userDoc.exists()) {
-                val userData = userDoc.data ?: emptyMap()
-                val activities = userData["Activity"] as? List<Map<String, Any>> ?: emptyList()
+    db.collection("user_info").document(uid).get().addOnSuccessListener { userDoc ->
+        if (userDoc.exists()) {
+            val userData = userDoc.data ?: emptyMap()
+            val activities = userData["Activity"] as? List<Map<String, Any>> ?: emptyList()
 
-                // Extract 'code' from the activities
-                val exerciseCodes = activities.mapNotNull { it["code"] as? String }
+            // Extract 'code' from the activities
+            val exerciseCodes = activities.mapNotNull { it["code"] as? String }
 
-                onSuccess(userData, exerciseCodes)
-            } else {
-                onFailure("No user found with the given UID.")
-            }
+            onSuccess(userData, exerciseCodes)
+        } else {
+            onFailure("No user found with the given UID.")
         }
-        .addOnFailureListener { exception ->
-            onFailure("Error fetching user info: ${exception.message}")
-        }
+    }.addOnFailureListener { exception ->
+        onFailure("Error fetching user info: ${exception.message}")
+    }
 }
 
 // Fetch exercises based on the codes (UIDs from 'Activity')
@@ -77,40 +67,38 @@ fun fetchExercisesForUser(
 
     // Fetch exercises using the list of 'code' (exercise uid)
     exerciseCodes.forEach { code ->
-        db.collection("Exercises").document(code).get()
-            .addOnSuccessListener { exerciseDoc ->
-                if (hasError) return@addOnSuccessListener
+        db.collection("Exercises").document(code).get().addOnSuccessListener { exerciseDoc ->
+            if (hasError) return@addOnSuccessListener
 
-                if (exerciseDoc.exists()) {
-                    val exerciseData = exerciseDoc.data ?: emptyMap()
-                    val doctorInCharge =
-                        exerciseData["doctor_incharge"] as? List<String> ?: emptyList()
+            if (exerciseDoc.exists()) {
+                val exerciseData = exerciseDoc.data ?: emptyMap()
+                val doctorInCharge =
+                    exerciseData["doctor_incharge"] as? List<String> ?: emptyList()
 
-                    // For each doctor associated with the exercise, fetch their information
-                    fetchDoctorsInfo(doctorInCharge) { doctorData ->
-                        val exerciseWithDoctors = exerciseData.toMutableMap()
-                        exerciseWithDoctors["doctors"] = doctorData
-                        exerciseWithDoctors["id"] = code  // Add the exercise ID for reference
-                        exerciseList.add(exerciseWithDoctors)
+                // For each doctor associated with the exercise, fetch their information
+                fetchDoctorsInfo(doctorInCharge) { doctorData ->
+                    val exerciseWithDoctors = exerciseData.toMutableMap()
+                    exerciseWithDoctors["doctors"] = doctorData
+                    exerciseWithDoctors["id"] = code  // Add the exercise ID for reference
+                    exerciseList.add(exerciseWithDoctors)
 
-                        completedCount++
-                        if (completedCount == exerciseCodes.size) {
-                            onSuccess(exerciseList)
-                        }
-                    }
-                } else {
                     completedCount++
                     if (completedCount == exerciseCodes.size) {
                         onSuccess(exerciseList)
                     }
                 }
-            }
-            .addOnFailureListener { exception ->
-                if (!hasError) {
-                    hasError = true
-                    onFailure("Error fetching exercise: ${exception.message}")
+            } else {
+                completedCount++
+                if (completedCount == exerciseCodes.size) {
+                    onSuccess(exerciseList)
                 }
             }
+        }.addOnFailureListener { exception ->
+            if (!hasError) {
+                hasError = true
+                onFailure("Error fetching exercise: ${exception.message}")
+            }
+        }
     }
 }
 
@@ -126,26 +114,24 @@ fun fetchDoctorsInfo(doctorUids: List<String>, onSuccess: (List<Map<String, Any>
     var completedCount = 0
 
     doctorUids.forEach { uid ->
-        db.collection("Doctors").document(uid).get()
-            .addOnSuccessListener { doctorDoc ->
-                if (doctorDoc.exists()) {
-                    val doctorData = doctorDoc.data?.toMutableMap() ?: mutableMapOf()
-                    doctorData["id"] = uid  // Add the doctor ID for reference
-                    doctorList.add(doctorData)
-                }
+        db.collection("Doctors").document(uid).get().addOnSuccessListener { doctorDoc ->
+            if (doctorDoc.exists()) {
+                val doctorData = doctorDoc.data?.toMutableMap() ?: mutableMapOf()
+                doctorData["id"] = uid  // Add the doctor ID for reference
+                doctorList.add(doctorData)
+            }
 
-                completedCount++
-                if (completedCount == doctorUids.size) {
-                    onSuccess(doctorList)
-                }
+            completedCount++
+            if (completedCount == doctorUids.size) {
+                onSuccess(doctorList)
             }
-            .addOnFailureListener { exception ->
-                // Even on failure, we need to count it as completed
-                completedCount++
-                if (completedCount == doctorUids.size) {
-                    onSuccess(doctorList)
-                }
+        }.addOnFailureListener { exception ->
+            // Even on failure, we need to count it as completed
+            completedCount++
+            if (completedCount == doctorUids.size) {
+                onSuccess(doctorList)
             }
+        }
     }
 }
 
@@ -166,14 +152,6 @@ fun fetchUserAndExercises(
     }, { error ->
         onFailure(error)
     })
-}
-
-// Function to store UID in SharedPreferences
-fun storeUidInSharedPreferences(uid: String, context: Context) {
-    val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-    sharedPreferences.edit {
-        putString("user_uid", uid)
-    }
 }
 
 // Function to retrieve UID from SharedPreferences
@@ -218,14 +196,78 @@ fun updateUserProfile(
     )
 
     // Using set with merge option to create or update data
-    userRef.set(updatedData, SetOptions.merge())
-        .addOnSuccessListener {
-            Log.d("Firestore Update", "User profile updated successfully")
-            onSuccess()
-        }
-        .addOnFailureListener { exception ->
-            val errorMsg = "Failed to update user profile: ${exception.message}"
-            Log.e("Firestore Update", errorMsg)
-            onFailure(errorMsg)
+    userRef.set(updatedData, SetOptions.merge()).addOnSuccessListener {
+        Log.d("Firestore Update", "User profile updated successfully")
+        onSuccess()
+    }.addOnFailureListener { exception ->
+        val errorMsg = "Failed to update user profile: ${exception.message}"
+        Log.e("Firestore Update", errorMsg)
+        onFailure(errorMsg)
+    }
+}
+
+
+// Function to register a new user
+// Function to register a new user
+fun registerUser(
+    email: String,
+    password: String,
+    name: String,
+    birthDate: String,
+    phoneNumber: String,
+    address: String,
+    context: Context,
+    onSuccess: (String) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    // Create a new user with email and password
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                // Get the UID of the new user
+                val uid = auth.currentUser?.uid
+
+                if (uid != null) {
+                    // Create a map of user data to store in Firestore
+                    val userData = mapOf(
+                        "name" to name,
+                        "email" to email,
+                        "birthDate" to birthDate,
+                        "phone_number" to phoneNumber,
+                        "address" to address,
+                        "profilePicture" to null
+                    )
+
+                    // Store the user info in Firestore under "user_info"
+                    db.collection("user_info").document(uid).set(userData)
+                        .addOnSuccessListener {
+                            // Store UID in SharedPreferences
+                            storeUidInSharedPreferences(uid, context)
+
+                            // Return success callback
+                            onSuccess(uid)
+                        }
+                        .addOnFailureListener { exception ->
+                            val errorMessage = "Failed to store user info: ${exception.message}"
+                            onFailure(errorMessage)
+                        }
+                } else {
+                    onFailure("Authentication failed: No UID found")
+                }
+            } else {
+                onFailure("Registration failed: ${task.exception?.message}")
+            }
         }
 }
+
+// Function to store UID in SharedPreferences
+fun storeUidInSharedPreferences(uid: String, context: Context) {
+    val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit {
+        putString("user_uid", uid)
+    }
+}
+

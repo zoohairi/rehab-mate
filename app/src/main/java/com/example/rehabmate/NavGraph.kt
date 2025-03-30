@@ -9,7 +9,7 @@ import com.example.rehabmate.screens.*
 import com.example.rehabmate.screens.demoPurposes.ExerciseApiScreen
 import com.example.rehabmate.screens.demoPurposes.ExerciseDemoScreen
 import com.example.rehabmate.screens.demoPurposes.SpeechScreen
-import com.example.rehabmate.screens.screensToBeDeleted.WelcomeScreen
+import com.example.rehabmate.screens.WelcomeScreen
 
 @Composable
 fun NavGraph(

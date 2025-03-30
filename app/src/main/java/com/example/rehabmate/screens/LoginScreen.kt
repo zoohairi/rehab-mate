@@ -4,14 +4,17 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.rehabmate.firebase.loginUser
 import com.google.firebase.auth.FirebaseAuth
 import com.example.rehabmate.firebase.storeUidInSharedPreferences
+import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.red_color
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -186,14 +190,23 @@ fun LoginScreen(navController: NavHostController) {
                     text = "Don't have an account? Sign up here",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    color = blue_color, // Ensure blue_color is defined in your colors
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.clickable { /* Navigate to Sign Up */ })
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .clickable(
+                            onClick = {
+                                navController.navigate("register_screen") // Navigate to Sign Up screen
+                            },
+                            indication = rememberRipple(bounded = true), // Adds ripple effect when clicked
+                            interactionSource = remember { MutableInteractionSource() } // Ensures correct interaction behavior
+                        )
+                )
+
             }
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
