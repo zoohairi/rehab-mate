@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.rehabmate.screens.AboutAppScreen
 import com.example.rehabmate.screens.AppointmentScreen
 import com.example.rehabmate.screens.BeginnerExerciseScreen
 import com.example.rehabmate.screens.ExerciseDemoScreen
@@ -45,6 +46,9 @@ fun NavGraph(
         composable("profile_screen") { ProfileScreen(navController) }
         composable("editProfile_screen") { editprofileScreen(navController) }
 
+        // New About App Screen
+        composable("about_app_screen") { AboutAppScreen(navController) }
+
         // Exercise Screens
         composable("exercise_screen") { ExerciseScreen(navController) }
         composable("favorites_screen") { FavoritesScreen(navController) }
@@ -67,5 +71,16 @@ fun NavGraph(
             ExerciseDemoScreen(navController)
         }
 
+        // Medical Records Screen (placeholder)
+        composable("medical_records_screen") {
+            // You can create a placeholder screen or redirect to profile for now
+            ProfileScreen(navController)
+        }
+
+        // Exercise History Screen (placeholder)
+        composable("exercise_history_screen") {
+            // You can create a placeholder screen or redirect to exercise screen for now
+            ExerciseScreen(navController)
+        }
     }
 }
