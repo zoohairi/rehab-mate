@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.rehabmate.firebase.loginUser
 import com.google.firebase.auth.FirebaseAuth
 import com.example.rehabmate.firebase.storeUidInSharedPreferences
+import com.example.rehabmate.ui.theme.red_color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,7 +143,7 @@ fun LoginScreen(navController: NavHostController) {
                 // Error Message
                 if (errorMessage.isNotEmpty()) {
                     Text(
-                        text = errorMessage, color = Color.Red, modifier = Modifier.padding(8.dp)
+                        text = errorMessage, color = red_color, modifier = Modifier.padding(8.dp)
                     )
                 }
 

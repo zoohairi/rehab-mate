@@ -1,4 +1,4 @@
-//change exerciseScreen to dashboard screen
+//change screen file name from 'exerciseScreen' to 'dashboard' screen
 package com.example.rehabmate.screens
 
 import android.util.Log
@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,9 +81,9 @@ fun DashboardScreen(navController: NavHostController) {
         // Content based on selected tab
         when (selectedTab) {
             0 -> HomeTab(navController)
-            1 -> ExerciseInfoTab(navController)
-            2 -> ExerciseListTab(navController)
-            3 -> ExerciseDemoTab(navController)
+            1 -> ExerciseInfoTab(navController) // the exercise use selected from dashboard will lead to a page to show the exercise information
+            2 -> ExerciseListTab(navController) // not sure about this page yet
+            3 -> ExerciseDemoTab(navController) // should like this page to ExerciseInfoTab (the exercise it self, should have the timer + TTS in this screen)
         }
     }
 }
@@ -387,6 +388,7 @@ fun HomeTab(navController: NavHostController) {
 
 @Composable
 fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
+    // make this clickable and click to =>  ExerciseInfoTab(navController)
     Card(
         modifier = Modifier
             .width(160.dp)
@@ -426,6 +428,8 @@ fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
                 Text(
                     text = subtitle, fontSize = 12.sp, color = Color.Gray
                 )
+
+
             }
         }
     }
@@ -661,7 +665,6 @@ fun AllExerciseItem(exercise: Map<String, Any>) {
         }
     }
 }
-
 
 @Composable
 fun ExerciseInfoTab(navController: NavHostController) {

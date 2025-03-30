@@ -53,7 +53,9 @@ fun NavGraph(
         composable("exercise_screen_api") {
             ExerciseApiScreen(navController)
         }
-
+        composable("exerciseInfo_screen/{exercise_name}") {
+            ExerciseInfoTab(navController)
+        }
         // Exercise Details Screens
         composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
             val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"

@@ -49,7 +49,7 @@ fun WelcomeScreen(navController: NavHostController) {
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = blue_color),
+                    colors = ButtonDefaults.buttonColors(containerColor = red_color),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         // Navigate to Login screen
@@ -61,7 +61,7 @@ fun WelcomeScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = red_color),
+                    colors = ButtonDefaults.buttonColors(containerColor = blue_color),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         // Navigate to Sign-up screen (if intended)
