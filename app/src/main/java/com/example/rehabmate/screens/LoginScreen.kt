@@ -156,7 +156,7 @@ fun LoginScreen(navController: NavHostController) {
                             loginUser(email.trim(), password.trim(), onSuccess = { uid ->
                                 storeUidInSharedPreferences(uid, context)
                                 Log.d("LoginScreen", "Login successful")
-                                navController.navigate("exercise_screen")
+                                navController.navigate("dashboard_screen") //change screen name from welcome to dashboard
                             }, onFailure = { error ->
                                 isLoading = false
                                 errorMessage = error

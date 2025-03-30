@@ -1,4 +1,4 @@
-package com.example.rehabmate.screens
+package com.example.rehabmate.screens.demoPurposes
 
 import Exercise
 import RetrofitInstance

@@ -1,3 +1,4 @@
+//change exerciseScreen to dashboard screen
 package com.example.rehabmate.screens
 
 import android.util.Log
@@ -55,7 +56,7 @@ import com.example.rehabmate.ui.theme.white_color
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
-fun ExerciseScreen(navController: NavHostController) {
+fun DashboardScreen(navController: NavHostController) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Home", "Exercise Info", "Exercise List", "Exercise Demo")
 
@@ -195,7 +196,9 @@ fun HomeTab(navController: NavHostController) {
                                     contentDescription = "Account",
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .clickable { /* Handle click */ })
+                                        .clickable {
+                                            navController.navigate("profile_screen")
+                                        })
                             }
                         }
                     }

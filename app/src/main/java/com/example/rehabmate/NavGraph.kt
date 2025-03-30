@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.rehabmate.screens.*
+import com.example.rehabmate.screens.demoPurposes.ExerciseApiScreen
 import com.example.rehabmate.screens.demoPurposes.ExerciseDemoScreen
 import com.example.rehabmate.screens.demoPurposes.SpeechScreen
 import com.example.rehabmate.screens.screensToBeDeleted.WelcomeScreen
@@ -38,7 +39,7 @@ fun NavGraph(
         composable("editProfile_screen") { editprofileScreen(navController) }
 
         // Exercise Screens
-        composable("exercise_screen") { ExerciseScreen(navController) }
+        composable("dashboard_screen") { DashboardScreen(navController) } //for exercise info's'
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
 
