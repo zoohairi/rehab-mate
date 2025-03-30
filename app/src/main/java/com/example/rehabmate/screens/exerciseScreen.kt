@@ -52,6 +52,10 @@ import com.example.rehabmate.ui.theme.white_color
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.android.gms.tasks.Task
+import com.example.rehabmate.firebase.fetchExercisesFromFirestore
+import com.example.rehabmate.firebase.getUidFromSharedPreferences
+import androidx.compose.ui.platform.LocalContext
+import com.example.rehabmate.firebase.fetchUserInfoByUid
 
 @Composable
 fun ExerciseScreen(navController: NavHostController) {
@@ -86,69 +90,113 @@ fun ExerciseScreen(navController: NavHostController) {
     }
 }
 
+
 @Composable
 fun HomeTab(navController: NavHostController) {
+    // Get the context using LocalContext in the composable function
+    val context = LocalContext.current
+
+    // Retrieve UID from SharedPreferences
+    val uid = getUidFromSharedPreferences(context)
+
+    // A state to store the name of the user
+    val userName = remember { mutableStateOf<String?>(null) }
+    val isLoading = remember { mutableStateOf(true) }
+
+    // Fetch user info (name) from Firestore
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            fetchUserInfoByUid(
+                uid = uid,
+                onSuccess = { userData ->
+                    // Check if the data comes from the 'Doctors' collection
+                    if (userData.containsKey("name")) {
+                        // Directly get the 'name' if it's from 'Doctors'
+                        userName.value = userData["name"] as? String
+                    } else if (userData.containsKey("profile")) {
+                        // If it's from 'user_info' collection, look for the 'profile' array and fetch the name
+                        val profile = userData["profile"] as? Map<String, Any>
+                        userName.value = profile?.get("name") as? String
+                    }
+                    isLoading.value = false
+                },
+                onFailure = { errorMessage ->
+                    // Handle error (e.g., show a message or default to a placeholder)
+                    userName.value = "Error fetching user name"
+                    isLoading.value = false
+                }
+            )
+        } else {
+            isLoading.value = false
+        }
+    }
+
     Box(modifier = Modifier.background(color = Color.Black)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            item {// Greeting section
-                Row(
-                    modifier = Modifier
+            item {
+                // Greeting section
+                if (isLoading.value) {
+                    // Show a loading indicator while fetching data
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else {
+                    userName.value?.let { name ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Hi $name,",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold, color = Color.White
+                                )
+                                Text(
+                                    text = "Ready to improve today",
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                            }
 
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Hi There,",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold, color = white_color
-                        )
-                        Text(
-                            text = "Ready to improve today",
-                            fontSize = 14.sp,
-                            color = white_color
-                        )
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.width(100.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = white_color,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable { /* Handle click */ }
-                        )
-//                    Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            tint = white_color,
-                            contentDescription = "Search",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable { /* Handle click */ }
-                        )
-//                    Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            tint = white_color,
-                            contentDescription = "Search",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable { /* Handle click */ }
-                        )
+                            // Icons for notifications, search, and account
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.width(100.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifications",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle click */ }
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    tint = Color.White,
+                                    contentDescription = "Search",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle click */ }
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    tint = Color.White,
+                                    contentDescription = "Account",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle click */ }
+                                )
+                            }
+                        }
                     }
                 }
-
                 // Feature cards section
                 Row(
                     modifier = Modifier
@@ -354,59 +402,21 @@ fun ExerciseInfoTab(navController: NavHostController) {
 
 @Composable
 fun ExerciseListTab(navController: NavHostController) {
-    val db = FirebaseFirestore.getInstance()
     val exercises = remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     val isLoading = remember { mutableStateOf(true) }
 
-    // Fetch exercises from Firebase
+    // Fetch exercises from Firebase using the helper function
     LaunchedEffect(true) {
-        db.collection("Exercises")
-            .get()
-            .addOnSuccessListener { result ->
-                val exerciseList = mutableListOf<Map<String, Any>>()
-                val doctorNameMap =
-                    mutableMapOf<String, String>() // Map to store doctor UID and name
-
-                for (document in result) {
-                    val exercise = document.data
-                    val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
-
-                    // Fetch doctor's name if UID exists in the 'Doctors' collection
-                    val doctorNames = mutableListOf<String>()
-                    doctorInCharge.forEach { doctorUid ->
-                        // Check if doctor name is already fetched
-                        if (doctorNameMap.containsKey(doctorUid)) {
-                            doctorNames.add(doctorNameMap[doctorUid] ?: "Unknown Doctor")
-                        } else {
-                            db.collection("Doctors").document(doctorUid)
-                                .get()
-                                .addOnSuccessListener { doctorDoc ->
-                                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                                    doctorNameMap[doctorUid] = doctorName
-                                    doctorNames.add(doctorName)
-                                }
-                                .addOnFailureListener { exception ->
-                                    Log.e(
-                                        "FirebaseError",
-                                        "Error fetching doctor name: ${exception.message}"
-                                    )
-                                }
-                        }
-                    }
-
-                    // Add the exercise details along with doctor names
-                    val exerciseWithDoctors = exercise.toMutableMap()
-                    exerciseWithDoctors["doctor_names"] = doctorNames
-                    exerciseList.add(exerciseWithDoctors)
-                }
-
-                exercises.value = exerciseList
+        fetchExercisesFromFirestore(
+            onSuccess = { fetchedExercises ->
+                exercises.value = fetchedExercises
+                isLoading.value = false
+            },
+            onFailure = { error ->
+                Log.e("FirebaseError", error)
                 isLoading.value = false
             }
-            .addOnFailureListener { exception ->
-                Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
-                isLoading.value = false
-            }
+        )
     }
 
     Column(

@@ -1,4 +1,4 @@
-package com.example.rehabmate.screens
+package com.example.rehabmate.screens.screensToBeDeleted
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -55,7 +55,7 @@ fun WelcomeScreen(navController: NavHostController) {
                         // Navigate to Login screen
                         navController.navigate("login_screen")
                     }) {
-                    Text(text = "Sign Up".uppercase(), modifier = Modifier.padding(10.dp))
+                    Text(text = "Login Up".uppercase(), modifier = Modifier.padding(10.dp))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

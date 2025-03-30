@@ -1,12 +1,14 @@
 package com.example.rehabmate
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.rehabmate.screens.*
+import com.example.rehabmate.screens.demoPurposes.ExerciseDemoScreen
+import com.example.rehabmate.screens.demoPurposes.SpeechScreen
+import com.example.rehabmate.screens.screensToBeDeleted.WelcomeScreen
 
 @Composable
 fun NavGraph(

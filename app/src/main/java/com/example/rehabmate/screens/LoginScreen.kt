@@ -1,5 +1,6 @@
 package com.example.rehabmate.screens
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -18,17 +20,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.rehabmate.firebase.loginUser
 import com.google.firebase.auth.FirebaseAuth
+import com.example.rehabmate.firebase.storeUidInSharedPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+
+    // Get context for SharedPreferences
+    val context = LocalContext.current
 
     Scaffold { paddingValues ->
         Column(
@@ -80,7 +86,7 @@ fun LoginScreen(navController: NavHostController) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF4285F4), RoundedCornerShape(12.dp))
+                        .background(Color(0xFF334460), RoundedCornerShape(12.dp))
                         .padding(16.dp)
                 ) {
                     // Email Field
@@ -147,21 +153,15 @@ fun LoginScreen(navController: NavHostController) {
                             errorMessage = "Please fill in both fields"
                         } else {
                             isLoading = true
-                            auth.signInWithEmailAndPassword(email.trim(), password.trim())
-                                .addOnCompleteListener { task ->
-                                    isLoading = false
-                                    if (task.isSuccessful) {
-                                        Log.d("LoginScreen", "Login successful")
-                                        navController.navigate("personalised_screen/${'$'}email")
-                                    } else {
-                                        errorMessage =
-                                            "Authentication failed: ${'$'}{task.exception?.message}"
-                                        Log.e(
-                                            "LoginScreen",
-                                            "Login failed: ${'$'}{task.exception?.message}"
-                                        )
-                                    }
-                                }
+                            loginUser(email.trim(), password.trim(), onSuccess = { uid ->
+                                storeUidInSharedPreferences(uid, context)
+                                Log.d("LoginScreen", "Login successful")
+                                navController.navigate("exercise_screen")
+                            }, onFailure = { error ->
+                                isLoading = false
+                                errorMessage = error
+                                Log.e("LoginScreen", error)
+                            })
                         }
                     },
                     modifier = Modifier
@@ -192,6 +192,7 @@ fun LoginScreen(navController: NavHostController) {
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

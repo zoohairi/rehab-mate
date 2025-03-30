@@ -1,4 +1,4 @@
-package com.example.rehabmate.screens
+package com.example.rehabmate.screens.demoPurposes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
