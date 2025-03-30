@@ -62,5 +62,16 @@ fun NavGraph(
             ExerciseDemoScreen(navController)
         }
 
+        composable("about_app_screen") { AboutAppScreen(navController) }
+        composable("medical_records_screen") {
+            // You can create a placeholder screen or redirect to profile for now
+            ProfileScreen(navController)
+        }
+
+//        // Exercise History Screen (placeholder)
+//        composable("exercise_history_screen") {
+//            // You can create a placeholder screen or redirect to exercise screen for now
+//            ExerciseScreen(navController)
+//        }
     }
 }
