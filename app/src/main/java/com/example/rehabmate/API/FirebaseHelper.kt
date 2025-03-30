@@ -1,10 +1,12 @@
 package com.example.rehabmate.firebase
 
 import android.content.Context
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.core.content.edit
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 // Firebase authentication
@@ -190,4 +192,40 @@ fun isUserLoggedIn(): Boolean {
 fun logoutUser(onComplete: () -> Unit) {
     FirebaseAuth.getInstance().signOut()
     onComplete()
+}
+
+// Update user info or create if it doesn't exist
+fun updateUserProfile(
+    uid: String,
+    name: String,
+    email: String,
+    address: String,
+    date: String,
+    phoneNumber: Int,
+    onSuccess: () -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    val userRef = db.collection("user_info").document(uid)
+
+    // Create a nested map for 'profile'
+    val updatedData = mapOf(
+        "profile" to mapOf(
+            "address" to address,
+            "date" to date,
+            "phone_number" to phoneNumber,
+        )
+    )
+
+    // Using set with merge option to create or update data
+    userRef.set(updatedData, SetOptions.merge())
+        .addOnSuccessListener {
+            Log.d("Firestore Update", "User profile updated successfully")
+            onSuccess()
+        }
+        .addOnFailureListener { exception ->
+            val errorMsg = "Failed to update user profile: ${exception.message}"
+            Log.e("Firestore Update", errorMsg)
+            onFailure(errorMsg)
+        }
 }
