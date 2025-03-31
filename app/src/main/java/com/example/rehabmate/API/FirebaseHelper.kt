@@ -264,6 +264,29 @@ fun registerUser(
         }
 }
 
+//retrieve user appointments
+fun fetchUserAppointments(
+    uid: String,
+    onSuccess: (List<Map<String, Any>>) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    val userRef = db.collection("user_info").document(uid)
+
+    userRef.get().addOnSuccessListener { userDoc ->
+        if (userDoc.exists()) {
+            val profile = userDoc.get("profile") as? Map<String, Any>
+            val appointments = profile?.get("appointment") as? List<Map<String, Any>> ?: emptyList()
+            onSuccess(appointments)
+        } else {
+            onFailure("No user found with the given UID.")
+        }
+    }.addOnFailureListener { exception ->
+        onFailure("Error fetching appointments: ${exception.message}")
+    }
+}
+
+
 // Function to store UID in SharedPreferences
 fun storeUidInSharedPreferences(uid: String, context: Context) {
     val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)

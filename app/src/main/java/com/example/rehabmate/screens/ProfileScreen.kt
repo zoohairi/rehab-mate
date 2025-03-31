@@ -62,8 +62,7 @@ fun ProfileScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp)
-            )
+                    .size(24.dp))
 
             // Header title
             Text(
@@ -118,16 +117,12 @@ fun ProfileScreen(navController: NavHostController) {
 
                 // User email
                 Text(
-                    text = userEmail,
-                    fontSize = 14.sp,
-                    color = Color.White
+                    text = userEmail, fontSize = 14.sp, color = Color.White
                 )
 
                 // User phone
                 Text(
-                    text = userPhone,
-                    fontSize = 14.sp,
-                    color = Color.White
+                    text = userPhone, fontSize = 14.sp, color = Color.White
                 )
             }
         }
@@ -148,45 +143,36 @@ fun ProfileScreen(navController: NavHostController) {
         MenuOption(
             icon = Icons.Default.Person,
             title = "Edit Profile",
-            onClick = { navController.navigate("editProfile_screen") }
-        )
+            onClick = { navController.navigate("editProfile_screen") })
 
         MenuOption(
             icon = Icons.Default.Person,
             title = "View Appointment",
-            onClick = { navController.navigate("appointment_screen") }
-        )
+            onClick = { navController.navigate("appointment_screen") })
 
         MenuOption(
             icon = Icons.Default.Person,
             title = "All Exercise History",
-            onClick = { /* Navigate to exercise history */ }
-        )
+            onClick = { /* Navigate to exercise history */ })
 
         MenuOption(
             icon = Icons.Default.Person,
             title = "Your Medical Records",
-            onClick = { /* Navigate to medical records */ }
-        )
+            onClick = { /* Navigate to medical records */ })
 
         MenuOption(
             icon = Icons.Default.Person,
             title = "About App",
-            onClick = { navController.navigate("about_app_screen") }
-        )
+            onClick = { navController.navigate("about_app_screen") })
 
         // Logout option
         MenuOption(
-            icon = Icons.Default.Person,
-            title = "Logout",
-            tint = Color.Red,
-            onClick = {
+            icon = Icons.Default.Person, title = "Logout", tint = Color.Red, onClick = {
                 auth.signOut()
                 navController.navigate("welcome_screen") {
                     popUpTo("welcome_screen") { inclusive = true }
                 }
-            }
-        )
+            })
     }
 }
 
@@ -199,15 +185,10 @@ fun StatItem(title: String, value: String) {
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = value,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
         )
         Text(
-            text = title,
-            fontSize = 12.sp,
-            color = Color.White
+            text = title, fontSize = 12.sp, color = Color.White
         )
     }
 }

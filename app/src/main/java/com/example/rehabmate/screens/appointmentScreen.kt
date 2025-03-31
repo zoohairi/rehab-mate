@@ -1,63 +1,92 @@
 package com.example.rehabmate.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.rehabmate.firebase.fetchUserAppointments
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AppointmentScreen(navController: NavHostController) {
-    // Sample appointment data - in a real app, this would come from Firestore
-    val appointments = remember {
-        listOf(
-            AppointmentData(
-                id = "1",
-                doctorName = "Dr. Sarah Johnson",
-                specialty = "Physiotherapist",
-                date = "15 Apr 2025",
-                time = "10:30 AM",
-                location = "Sydney Health Clinic, Level 3"
-            ),
-            AppointmentData(
-                id = "2",
-                doctorName = "Dr. Michael Chen",
-                specialty = "Orthopedic Specialist",
-                date = "22 Apr 2025",
-                time = "2:15 PM",
-                location = "Melbourne Medical Center"
-            ),
-            AppointmentData(
-                id = "3",
-                doctorName = "Dr. Emma Watson",
-                specialty = "Rehabilitation Therapist",
-                date = "5 May 2025",
-                time = "9:00 AM",
-                location = "Brisbane Rehab Center"
-            )
-        )
-    }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
+    var appointments by remember { mutableStateOf<List<AppointmentData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    var showAddAppointmentDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(user) {
+        user?.let {
+            fetchUserAppointments(it.uid, { appointmentList ->
+                // current issue is appoint are in timestamp data-tpye and got error
+                // Save fetched appointments to the state
+                appointments = appointmentList.map { appointment ->
+                    AppointmentData(
+                        id = "no Id",
+                        doctorName = "Doctor Name",
+                        specialty = "Specialty",
+                        date = appointment.toString(),
+                        time = appointment.toString(),
+                        location = "No Location"
+                    )
+                }
+                isLoading = false
+            }, { error ->
+                Log.e("AppointmentScreen", error)
+                isLoading = false
+            })
+        } ?: run {
+            Log.e("AppointmentScreen", "User not logged in")
+            isLoading = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -71,7 +100,6 @@ fun AppointmentScreen(navController: NavHostController) {
                 .background(Color(0xFF2196F3))
                 .padding(16.dp)
         ) {
-            // Back button
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
@@ -79,10 +107,8 @@ fun AppointmentScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp)
-            )
+                    .size(24.dp))
 
-            // Header title
             Text(
                 text = "APPOINTMENTS",
                 fontSize = 18.sp,
@@ -90,84 +116,42 @@ fun AppointmentScreen(navController: NavHostController) {
                 color = Color.White,
                 modifier = Modifier.align(Alignment.Center)
             )
-
-            // Add appointment button
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add Appointment",
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .clickable { showAddAppointmentDialog = true }
-                    .size(24.dp)
-            )
         }
 
-        // Calendar header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF303030))
-                .padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Upcoming Appointments",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = getCurrentMonth(),
-                    fontSize = 14.sp,
-                    color = Color.LightGray
-                )
-            }
-        }
-
-        // Appointments list
-        if (appointments.isEmpty()) {
+        if (isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No appointments scheduled",
-                    fontSize = 16.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center
-                )
+                CircularProgressIndicator(color = Color.White)
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(appointments) { appointment ->
-                    AppointmentCard(appointment = appointment)
+            if (appointments.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No appointments scheduled",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(appointments) { appointment ->
+                        AppointmentCard(appointment = appointment)
+                    }
                 }
             }
         }
-    }
-
-    // Add appointment dialog
-    if (showAddAppointmentDialog) {
-        AddAppointmentDialog(
-            onDismiss = { showAddAppointmentDialog = false },
-            onAddAppointment = { /* Handle adding new appointment */
-                showAddAppointmentDialog = false
-            }
-        )
     }
 }
 
@@ -193,9 +177,7 @@ fun AppointmentCard(appointment: AppointmentData) {
             )
 
             Text(
-                text = appointment.specialty,
-                fontSize = 14.sp,
-                color = Color.Gray
+                text = appointment.specialty, fontSize = 14.sp, color = Color.Gray
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -236,9 +218,7 @@ fun AppointmentCard(appointment: AppointmentData) {
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = appointment.location,
-                    fontSize = 14.sp,
-                    color = Color.White
+                    text = appointment.location, fontSize = 14.sp, color = Color.White
                 )
             }
 
@@ -246,8 +226,7 @@ fun AppointmentCard(appointment: AppointmentData) {
 
             // Action buttons
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
             ) {
                 TextButton(
                     onClick = { /* Handle cancel */ },
@@ -278,81 +257,73 @@ fun AddAppointmentDialog(onDismiss: () -> Unit, onAddAppointment: () -> Unit) {
     var time by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Add New Appointment",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
+    AlertDialog(onDismissRequest = onDismiss, title = {
+        Text(
+            text = "Add New Appointment", fontSize = 18.sp, fontWeight = FontWeight.Bold
+        )
+    }, text = {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            TextField(
+                value = doctorName,
+                onValueChange = { doctorName = it },
+                label = { Text("Doctor Name") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            ) {
-                TextField(
-                    value = doctorName,
-                    onValueChange = { doctorName = it },
-                    label = { Text("Doctor Name") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
+                    .padding(vertical = 4.dp)
+            )
 
-                TextField(
-                    value = specialty,
-                    onValueChange = { specialty = it },
-                    label = { Text("Specialty") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
+            TextField(
+                value = specialty,
+                onValueChange = { specialty = it },
+                label = { Text("Specialty") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
 
-                TextField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = { Text("Date (DD/MM/YYYY)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
+            TextField(
+                value = date,
+                onValueChange = { date = it },
+                label = { Text("Date (DD/MM/YYYY)") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
 
-                TextField(
-                    value = time,
-                    onValueChange = { time = it },
-                    label = { Text("Time") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
+            TextField(
+                value = time,
+                onValueChange = { time = it },
+                label = { Text("Time") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
 
-                TextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    label = { Text("Location") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onAddAppointment,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
-            ) {
-                Text("ADD")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCEL")
-            }
+            TextField(
+                value = location,
+                onValueChange = { location = it },
+                label = { Text("Location") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
         }
-    )
+    }, confirmButton = {
+        Button(
+            onClick = onAddAppointment,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+        ) {
+            Text("ADD")
+        }
+    }, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("CANCEL")
+        }
+    })
 }
 
 // Helper function to get current month name
