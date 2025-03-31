@@ -208,7 +208,6 @@ fun updateUserProfile(
 
 
 // Function to register a new user
-// Function to register a new user
 fun registerUser(
     email: String,
     password: String,
@@ -235,11 +234,13 @@ fun registerUser(
                     val userData = mapOf(
                         "name" to name,
                         "email" to email,
-                        "birthDate" to birthDate,
-                        "phone_number" to phoneNumber,
-                        "address" to address,
-                        "profilePicture" to null
+                        "profile" to mapOf(
+                            "address" to address,
+                            "date" to birthDate,
+                            "phone_number" to phoneNumber,
+                        )
                     )
+
 
                     // Store the user info in Firestore under "user_info"
                     db.collection("user_info").document(uid).set(userData)
