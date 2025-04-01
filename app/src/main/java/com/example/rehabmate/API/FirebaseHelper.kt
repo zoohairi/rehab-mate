@@ -11,7 +11,7 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// Firebase authentication
+// Firebase authentication (for login)
 fun loginUser(
     email: String, password: String, onSuccess: (String) -> Unit, onFailure: (String) -> Unit
 ) {
@@ -164,43 +164,6 @@ fun fetchDoctorsInfo(doctorUids: List<String>, onSuccess: (List<Map<String, Any>
 }
 
 
-//// Function to fetch user and exercises data (combined)
-//fun fetchUserAndExercises(
-//    uid: String,
-//    onSuccess: (Map<String, Any>, List<Map<String, Any>>) -> Unit,
-//    onFailure: (String) -> Unit
-//) {
-//    fetchUserInfo(uid, { userData, exerciseCodes ->
-//        // After fetching user info and exercise codes, fetch exercises
-//        fetchExercisesForUser(exerciseCodes, { exercises ->
-//            // Return both the user data and exercises
-//            onSuccess(userData, exercises)
-//        }, { error ->
-//            onFailure(error)
-//        })
-//    }, { error ->
-//        onFailure(error)
-//    })
-//}
-
-// Function to retrieve UID from SharedPreferences
-fun getUidFromSharedPreferences(context: Context): String? {
-    val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-    return sharedPreferences.getString("user_uid", null)
-}
-
-// check if user is logged in
-fun isUserLoggedIn(): Boolean {
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    return currentUser != null
-}
-
-// log out user
-fun logoutUser(onComplete: () -> Unit) {
-    FirebaseAuth.getInstance().signOut()
-    onComplete()
-}
-
 // Update user info or create if it doesn't exist
 fun updateUserProfile(
     uid: String,
@@ -232,6 +195,92 @@ fun updateUserProfile(
         val errorMsg = "Failed to update user profile: ${exception.message}"
         Log.e("Firestore Update", errorMsg)
         onFailure(errorMsg)
+    }
+}
+
+
+// Function to register a new user
+fun fetchUserAppointments(
+    uid: String,
+    onSuccess: (List<Map<String, Any>>) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    val userRef = db.collection("user_info").document(uid)
+
+    userRef.get().addOnSuccessListener { userDoc ->
+        if (userDoc.exists()) {
+            val profile = userDoc.data?.get("profile") as? Map<*, *> ?: emptyMap<Any, Any>()
+            Log.d("ProfileData", profile.toString())
+
+            val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
+
+            // Convert timestamps to formatted date strings
+            val dateFormatter = SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
+
+            val appointments = rawAppointments.mapNotNull {
+                when (it) {
+                    is Map<*, *> -> {
+                        val code = it["code"] as? String ?: "Unknown Code"
+                        val timestamp = it["date_time"] as? Timestamp
+                        val formattedDate =
+                            timestamp?.let { dateFormatter.format(it.toDate()) } ?: "Unknown Date"
+
+                        // Step 1: Retrieve exercise based on code
+                        val exerciseRef = db.collection("Exercises").whereEqualTo("code", code)
+                        exerciseRef.get().addOnSuccessListener { exerciseSnapshot ->
+                            if (exerciseSnapshot.documents.isNotEmpty()) {
+                                val exerciseDoc = exerciseSnapshot.documents[0]
+                                val doctorInCharge =
+                                    exerciseDoc.get("doctor_incharge") as? List<String>
+                                        ?: emptyList()
+
+                                // Step 2: Check doctor details for each doctor_incharge UID
+                                doctorInCharge.forEach { doctorUid ->
+                                    val doctorRef = db.collection("Doctors").document(doctorUid)
+                                    doctorRef.get().addOnSuccessListener { doctorDoc ->
+                                        if (doctorDoc.exists()) {
+                                            val doctorData = doctorDoc.data
+                                            // You can process doctorData here
+                                            Log.d("DoctorData", doctorData.toString())
+                                        } else {
+                                            Log.d("DoctorData", "Doctor doesn't exist")
+                                        }
+                                    }.addOnFailureListener { exception ->
+                                        Log.d(
+                                            "DoctorData",
+                                            "Error retrieving doctor data: ${exception.message}"
+                                        )
+                                    }
+                                }
+                            } else {
+                                Log.d("ExerciseData", "Exercise with code $code doesn't exist.")
+                            }
+                        }.addOnFailureListener { exception ->
+                            Log.d(
+                                "ExerciseData",
+                                "Error fetching exercise data: ${exception.message}"
+                            )
+                        }
+
+                        // Return appointment data after retrieving doctors
+                        mapOf(
+                            "code" to code,
+                            "date_time" to formattedDate
+                        )
+                    }
+
+                    else -> null
+                }
+            }
+
+            Log.d("Appointments", appointments.toString())
+            onSuccess(appointments)
+        } else {
+            onFailure("No user found with the given UID.")
+        }
+    }.addOnFailureListener { exception ->
+        onFailure("Error fetching appointments: ${exception.message}")
     }
 }
 
@@ -288,53 +337,7 @@ fun registerUser(
     }
 }
 
-//getting user's appointments
-fun fetchUserAppointments(
-    uid: String,
-    onSuccess: (List<Map<String, Any>>) -> Unit,
-    onFailure: (String) -> Unit
-) {
-    val db = FirebaseFirestore.getInstance()
-    val userRef = db.collection("user_info").document(uid)
-
-    userRef.get().addOnSuccessListener { userDoc ->
-        if (userDoc.exists()) {
-            val profile = userDoc.data?.get("profile") as? Map<*, *> ?: emptyMap<Any, Any>()
-            Log.d("ProfileData", profile.toString())
-
-            val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
-
-            // Convert timestamps to formatted date strings
-            val dateFormatter = SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
-
-            val appointments = rawAppointments.mapNotNull {
-                when (it) {
-                    is Map<*, *> -> {
-                        val code = it["code"] as? String ?: "Unknown Code"
-                        val timestamp = it["date_time"] as? Timestamp
-                        val formattedDate =
-                            timestamp?.let { dateFormatter.format(it.toDate()) } ?: "Unknown Date"
-
-                        mapOf(
-                            "code" to code,
-                            "date_time" to formattedDate
-                        )
-                    }
-
-                    else -> null
-                }
-            }
-
-            Log.d("Appointments", appointments.toString())
-            onSuccess(appointments)
-        } else {
-            onFailure("No user found with the given UID.")
-        }
-    }.addOnFailureListener { exception ->
-        onFailure("Error fetching appointments: ${exception.message}")
-    }
-}
-
+//=====SHARED PREFERENCES=====
 // Function to store UID in SharedPreferences
 fun storeUidInSharedPreferences(uid: String, context: Context) {
     val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
@@ -343,3 +346,8 @@ fun storeUidInSharedPreferences(uid: String, context: Context) {
     }
 }
 
+// Function to retrieve UID from SharedPreferences
+fun getUidFromSharedPreferences(context: Context): String? {
+    val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    return sharedPreferences.getString("user_uid", null)
+}
