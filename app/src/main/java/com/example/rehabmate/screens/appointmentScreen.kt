@@ -83,6 +83,11 @@ fun AppointmentScreen(navController: NavHostController) {
     var isLoading by remember { mutableStateOf(true) }
     var showAddAppointmentDialog by remember { mutableStateOf(false) }
 
+    // Function to get the latest appointment
+    val latestAppointment: AppointmentData? = appointments
+        .sortedByDescending { LocalDate.parse(it.date, DateTimeFormatter.ofPattern("dd/MM/yyyy")) }
+        .firstOrNull()
+
     LaunchedEffect(user) {
         user?.let {
             fetchUserAppointmentsAndUpdateState(it.uid, { appointmentList ->
@@ -162,11 +167,31 @@ fun AppointmentScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = getCurrentMonth(),
-                    fontSize = 14.sp,
-                    color = Color.LightGray
-                )
+                // Show the latest appointment date
+                if (latestAppointment != null) {
+                    val latestDate = LocalDate.parse(
+                        latestAppointment.date,
+                        DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                    )
+                    Text(
+                        text = "Latest appointment: ${
+                            latestDate.format(
+                                DateTimeFormatter.ofPattern(
+                                    "dd MMM yyyy"
+                                )
+                            )
+                        }",
+                        fontSize = 14.sp,
+                        color = Color.LightGray
+                    )
+                } else {
+                    // If no appointment data is found
+                    Text(
+                        text = "No upcoming appointments",
+                        fontSize = 14.sp,
+                        color = Color.LightGray
+                    )
+                }
             }
         }
 
@@ -204,8 +229,18 @@ fun AppointmentScreen(navController: NavHostController) {
                 }
             }
         }
+        // Add appointment dialog
+        if (showAddAppointmentDialog) {
+            AddAppointmentDialog(
+                onDismiss = { showAddAppointmentDialog = false },
+                onAddAppointment = { /* Handle adding new appointment */
+                    showAddAppointmentDialog = false
+                }
+            )
+        }
     }
 }
+
 
 @Composable
 fun AppointmentCard(appointment: AppointmentData) {
