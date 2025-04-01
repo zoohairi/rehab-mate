@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -121,7 +122,7 @@ fun HomeTab(navController: NavHostController) {
                     else -> "User"
                 }
 
-                // Extract profile data (e.g., date, address, gender, etc.)
+                // Extract profile data
                 val profileData = userData["profile"] as? Map<String, Any>
                 profileData?.let {
                     val profile = mapOf(
@@ -134,18 +135,15 @@ fun HomeTab(navController: NavHostController) {
                 }
 
                 // Fetch user exercise from fb
-                fetchExercisesForUser(
-                    uid,
-                    onSuccess = { exercises ->
-                        exerciseList.value = exercises
-                        isLoading.value = false
-                    },
-                    onFailure = { error ->
-                        errorMessage.value = error
-                        isLoading.value = false
-                    })
+                fetchExercisesForUser(uid, onSuccess = { exercises ->
+                    exerciseList.value = exercises
+                    isLoading.value = false
+                }, onFailure = { error ->
+                    errorMessage.value = error
+                    isLoading.value = false
+                })
             }.onFailure { error ->
-                // Handle error (e.g., show a message or default to a placeholder)
+                // Handle error
                 Log.e("HomeTab", "Error fetching data: ${error.message}")
                 userName.value = "User"
                 exerciseList.value = emptyList() // Empty list in case of error
@@ -251,7 +249,63 @@ fun HomeTab(navController: NavHostController) {
                         )
                     }
 
+                    // Graph Visualization section
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .background(color = blue_color)
+                            .padding(vertical = 8.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF1E1E1E))
+                                .padding(16.dp), contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Graph Visualization",
+                                fontSize = 18.sp,
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+
                     // Exercises section
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Your Rehab Exercises",
+                            modifier = Modifier.padding(top = 10.dp),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = white_color
+                        )
+
+                        Row {
+                            Text(
+                                text = "See All",
+                                fontSize = 14.sp,
+                                color = white_color,
+                                modifier = Modifier.clickable { /* Handle see all click */ })
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "View All",
+                                tint = white_color,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clickable { /* Handle back navigation */ })
+                        }
+                    }
+                    //user's exercise list below
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -259,6 +313,7 @@ fun HomeTab(navController: NavHostController) {
                             .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+
                         if (exerciseList.value.isEmpty()) {
                             item {
                                 Text("No exercises available.", color = Color.White)
@@ -267,7 +322,7 @@ fun HomeTab(navController: NavHostController) {
                             items(exerciseList.value.size) { index ->
                                 val exercise = exerciseList.value[index]
 
-                                // Debugging: Log the entire exercise data for inspection
+                                // debug: entire exercise data for inspection
                                 Log.d("ExerciseDebug", "Exercise at index $index: $exercise")
 
                                 // Extracting exercise data
@@ -286,12 +341,8 @@ fun HomeTab(navController: NavHostController) {
                                     "Title: $exerciseTitle, Subexercise IDs: $subexerciseIds, Description: $description, Remark: $remark"
                                 )
 
-                                // Creating ExerciseItem UI
                                 ExerciseItem(
-                                    title = exerciseTitle,
-                                    subtitle = remark,
-                                    onClick = {
-                                        // Debugging: Log the exercise ID when clicked
+                                    title = exerciseTitle, subtitle = remark, onClick = {
                                         val exerciseId = exercise["id"] as? String
                                         Log.d("ExerciseDebug", "Exercise clicked: $exerciseId")
 
@@ -300,10 +351,88 @@ fun HomeTab(navController: NavHostController) {
                                             // You can navigate to a detail screen with the ID
                                             // navController.navigate("exerciseDetail/$exerciseId")
                                         }
-                                    }
-                                )
+                                    })
                             }
 
+                        }
+                    }
+
+                    // retrieve & display all the Exercise data also
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Continue Exercise",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = white_color
+                        )
+
+                        Row {
+                            Text(
+                                text = "See All",
+                                fontSize = 14.sp,
+                                color = white_color,
+                                modifier = Modifier.clickable { /* Handle see all click */ })
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "View All",
+                                tint = white_color,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clickable { /* Handle back navigation */ })
+                        }
+                    }
+
+                    // Continue buttons (Resume exercise)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Check if there are exercises to show for "Continue Exercise"
+                        if (exerciseList.value.isNotEmpty()) {
+                            // Display ContinueButton for each exercise
+                            exerciseList.value.take(2).forEachIndexed { index, exercise ->
+                                Log.d("exerciseData123", exercise.toString())
+                                // Extracting exercise data
+                                val exerciseTitle =
+                                    exercise["exercise_title"] as? String ?: "No Title"
+//                                val exerciseSubtitle =
+//                                    exercise["remark"] as? String ?: "No Description"
+
+                                ContinueButton(
+                                    title = exerciseTitle,
+                                    subtitle = "description here",
+                                    onClick = {
+                                        // Handle continue button click, e.g., navigate to exercise detail
+                                        val exerciseId = exercise["id"] as? String
+                                        Log.d(
+                                            "ContinueButtonDebug",
+                                            "Continue button clicked for $exerciseId"
+                                        )
+
+                                        // You can navigate to a detail screen for this specific exercise
+                                        if (exerciseId != null) {
+                                            navController.navigate("exerciseDetail/$exerciseId")
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        } else {
+                            // Show a message if there are no exercises to continue
+                            Text(
+                                text = "No exercises to continue",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = white_color
+                            )
                         }
                     }
                 }
@@ -461,7 +590,8 @@ fun ContinueButton(
 ) {
     Card(
         modifier = modifier
-            .height(55.dp)
+            .height(65.dp)
+            .width(60.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
@@ -486,23 +616,32 @@ fun ContinueButton(
             }
 
             Column(
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
+                verticalArrangement = Arrangement.SpaceEvenly
+                // Reduced padding here
             ) {
                 Text(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    maxLines = 1, // Limit to one line
+                    overflow = TextOverflow.Ellipsis // Hide overflow with ellipsis
                 )
 
+
                 Text(
-                    text = subtitle, fontSize = 10.sp, color = Color.Gray
+                    text = subtitle,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                    color = Color.Gray,
+                    maxLines = 1, // Limit to one line
+                    overflow = TextOverflow.Ellipsis // Hide overflow with ellipsis
                 )
             }
         }
     }
 }
-
 
 @Composable
 fun AllExerciseItem(exercise: Map<String, Any>) {
