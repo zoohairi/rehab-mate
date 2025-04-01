@@ -45,17 +45,16 @@ suspend fun fetchUserInfo(uid: String): Result<Map<String, Any>> {
 }
 
 
-// Fetch exercises based on the codes (UIDs from 'Activity')
+//getting user user_Info and retrieve a;; exercise details
 suspend fun fetchExercisesForUser(
     uid: String, onSuccess: (List<Map<String, Any>>) -> Unit, onFailure: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
-    // Now, fetch exercise details using these codes
-
     val exerciseList = mutableListOf<Map<String, Any>>()
     var completedCount = 0
     var hasError = false
-    // First, fetch user info to get the list of exercise codes
+
+    // Fetch user info to get the list of exercise codes and their status's
     db.collection("user_info").document(uid).get().addOnSuccessListener { userDoc ->
         if (!userDoc.exists()) {
             onFailure("User not found")
@@ -63,10 +62,21 @@ suspend fun fetchExercisesForUser(
         }
 
         val userData = userDoc.data ?: emptyMap()
-        val userName = userData["name"] as? String ?: "Unknown" // Extract user name
-        val activityList = userData["Activity"] as? List<Map<String, Any>> ?: emptyList()
-        val exerciseCodes = activityList.mapNotNull { it["code"] as? String }
+        val userName = userData["name"] as? String ?: "Unknown"
 
+        val activityList = userData["Activity"] as? List<Map<String, Any>> ?: emptyList()
+
+        //  the exercise code and its corresponding status
+        val exerciseStatusMap = activityList.associate {
+            val code = it["code"] as? String
+            val status = it["status"] as? String ?: "Not Started"
+            code to status
+        }.filterKeys { it != null } as Map<String, String>
+
+        Log.d("exerciseStatusMap", exerciseStatusMap.toString())
+
+        // Extract exercise codes
+        val exerciseCodes = exerciseStatusMap.keys.toList()
         Log.d("ActivityDebug", "Extracted Exercise Codes: $exerciseCodes")
 
         if (exerciseCodes.isEmpty()) {
@@ -74,6 +84,7 @@ suspend fun fetchExercisesForUser(
             return@addOnSuccessListener
         }
 
+        // Retrieve exercise details
         exerciseCodes.forEach { code ->
             db.collection("Exercises").document(code).get().addOnSuccessListener { exerciseDoc ->
                 if (hasError) return@addOnSuccessListener
@@ -87,7 +98,9 @@ suspend fun fetchExercisesForUser(
                         val exerciseWithDoctors = exerciseData.toMutableMap()
                         exerciseWithDoctors["doctors"] = doctorData
                         exerciseWithDoctors["id"] = code
-                        exerciseWithDoctors["userName"] = userName // Add user name
+                        exerciseWithDoctors["userName"] = userName
+                        exerciseWithDoctors["status"] =
+                            exerciseStatusMap[code] ?: "Not Started"
 
                         exerciseList.add(exerciseWithDoctors)
                         completedCount++
@@ -112,9 +125,7 @@ suspend fun fetchExercisesForUser(
     }.addOnFailureListener { exception ->
         onFailure("Error fetching user info: ${exception.message}")
     }
-
 }
-
 
 // Fetch doctor info based on the doctor UID
 fun fetchDoctorsInfo(doctorUids: List<String>, onSuccess: (List<Map<String, Any>>) -> Unit) {

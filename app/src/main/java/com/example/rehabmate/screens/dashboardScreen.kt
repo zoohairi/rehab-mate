@@ -122,20 +122,9 @@ fun HomeTab(navController: NavHostController) {
                     else -> "User"
                 }
 
-                // Extract profile data
-                val profileData = userData["profile"] as? Map<String, Any>
-                profileData?.let {
-                    val profile = mapOf(
-                        "date" to it["date"],
-                        "address" to it["address"],
-                        "gender" to it["gender"],
-                        "age" to it["age"]
-                    )
-                    Log.d("ProfileData", "Profile: $profile")
-                }
-
                 // Fetch user exercise from fb
                 fetchExercisesForUser(uid, onSuccess = { exercises ->
+                    Log.d("ExerciseList", exercises.toString())
                     exerciseList.value = exercises
                     isLoading.value = false
                 }, onFailure = { error ->
@@ -323,9 +312,10 @@ fun HomeTab(navController: NavHostController) {
                                 val exercise = exerciseList.value[index]
 
                                 // debug: entire exercise data for inspection
-                                Log.d("ExerciseDebug", "Exercise at index $index: $exercise")
+                                Log.d("ExerciseDebug", exerciseList.toString())
 
                                 // Extracting exercise data
+                                val exerciseStatus = exercise["status"] as? String ?: "No Status"
                                 val exerciseTitle =
                                     exercise["exercise_title"] as? String ?: "No Title"
                                 val subexerciseList =
@@ -342,7 +332,7 @@ fun HomeTab(navController: NavHostController) {
                                 )
 
                                 ExerciseItem(
-                                    title = exerciseTitle, subtitle = remark, onClick = {
+                                    title = exerciseTitle, subtitle = exerciseStatus, onClick = {
                                         val exerciseId = exercise["id"] as? String
                                         Log.d("ExerciseDebug", "Exercise clicked: $exerciseId")
 
