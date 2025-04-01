@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
@@ -80,6 +81,7 @@ fun AppointmentScreen(navController: NavHostController) {
     val user = auth.currentUser
     var appointments by remember { mutableStateOf<List<AppointmentData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var showAddAppointmentDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(user) {
         user?.let {
@@ -109,6 +111,7 @@ fun AppointmentScreen(navController: NavHostController) {
                 .background(Color(0xFF2196F3))
                 .padding(16.dp)
         ) {
+            // Back button
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
@@ -116,8 +119,10 @@ fun AppointmentScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp))
+                    .size(24.dp)
+            )
 
+            // Header title
             Text(
                 text = "APPOINTMENTS",
                 fontSize = 18.sp,
@@ -125,6 +130,44 @@ fun AppointmentScreen(navController: NavHostController) {
                 color = Color.White,
                 modifier = Modifier.align(Alignment.Center)
             )
+
+            // Add appointment button
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Appointment",
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clickable { showAddAppointmentDialog = true }
+                    .size(24.dp)
+            )
+        }
+        // Calendar header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF303030))
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Upcoming Appointments",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = getCurrentMonth(),
+                    fontSize = 14.sp,
+                    color = Color.LightGray
+                )
+            }
         }
 
         if (isLoading) {
@@ -178,6 +221,9 @@ fun AppointmentCard(appointment: AppointmentData) {
         else -> "$daysDifference days left"
     }
 
+    // Use remember to persist the state across recompositions
+    var detailsDisplayed by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -189,16 +235,15 @@ fun AppointmentCard(appointment: AppointmentData) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Display of doctor info
+            // Display doctor information first
             appointment.doctors.forEachIndexed { index, doctor ->
-                // Display each doctor and their specialty
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 15.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    //point form
+                    // point form
                     Text(
                         text = "${index + 1}.",
                         fontSize = 16.sp,
@@ -211,7 +256,7 @@ fun AppointmentCard(appointment: AppointmentData) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Dr. " + doctor.name.split(" ")
-                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, //sentence case
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, // sentence case
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -220,7 +265,7 @@ fun AppointmentCard(appointment: AppointmentData) {
                         )
                         Text(
                             text = doctor.specialty.split(" ")
-                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, //sentence case
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, // sentence case
                             fontSize = 14.sp,
                             color = Color.Gray,
                             maxLines = 1,
@@ -232,116 +277,71 @@ fun AppointmentCard(appointment: AppointmentData) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Date",
-                    tint = Color(0xFF2196F3),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${appointment.date} at ${appointment.time}",
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Location",
-                    tint = Color(0xFF2196F3),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = appointmentStatus,
-                fontSize = 14.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (daysDifference == 0L) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Text(text = "Your appointment is today!", color = Color.Gray)
+            // Check if the appointment details have been displayed
+            if (!detailsDisplayed) {
+                // Show the appointment details only once
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Date",
+                        tint = Color(0xFF2196F3),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${appointment.date} at ${appointment.time}",
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
                 }
-            } else if (daysDifference < 0) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {},
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color(0xFF2196F3),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = appointmentStatus,
+                    fontSize = 14.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (daysDifference == 0L) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text("This appointment has already passed.")
+                        Text(text = "Your appointment is today!", color = Color.Gray)
+                    }
+                } else if (daysDifference < 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = {},
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                        ) {
+                            Text("This appointment has already passed.")
+                        }
                     }
                 }
-            }
 
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Date",
-                    tint = Color(0xFF2196F3),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${appointment.date} at ${appointment.time}",
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Location",
-                    tint = Color(0xFF2196F3),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = appointmentStatus,
-                fontSize = 14.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (daysDifference == 0L) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Text(text = "Your appointment is today!", color = Color.Gray)
-                }
-            } else if (daysDifference < 0) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {},
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
-                    ) {
-                        Text("This appointment has already passed.")
-                    }
-                }
+                // Mark that the details have been displayed
+                detailsDisplayed = true
             }
         }
     }
