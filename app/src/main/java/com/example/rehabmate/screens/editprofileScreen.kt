@@ -29,7 +29,7 @@ fun editprofileScreen(navController: NavHostController) {
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
     var uid: String? = null
-    /// mutableState variables for user information
+    // Mutable state variables for user information
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -43,23 +43,28 @@ fun editprofileScreen(navController: NavHostController) {
         Log.d("User UID", "No user is currently logged in.")
     }
 
-    // function to fetch user info
+    // Launch the coroutine to fetch user info when uid is available
     LaunchedEffect(uid) {
-        fetchUserInfo(uid.toString(), onSuccess = { userData, exerciseCodes ->
-            Log.d("userinfo", userData.toString())
-
-            // Update state variables with the fetched data
-            val profile = userData["profile"] as? Map<String, Any> ?: emptyMap()
-
-            //  extract values from the profile map
-            name = userData["name"] as? String ?: "Not stated"
-            email = userData["email"] as? String ?: "Not stated"
-            phone = profile["phone_number"] as? String ?: "Not stated"
-            address = profile["address"] as? String ?: "Not stated"
-            birthDate = profile["date"] as? String ?: "Not stated"
-        }, onFailure = { errorMessage ->
-            Log.e("UserInfo", errorMessage)
-        })
+        if (uid != null) {
+            val result = fetchUserInfo(uid)
+            result.onSuccess { userData ->
+                Log.d("UserInfo", userData.toString())
+                // Extract profile data
+                val profile = userData["profile"] as? Map<String, Any> ?: emptyMap()
+                name = profile["name"] as? String ?: "Not Stated"
+                // Email is at the top level in your document
+                email = userData["email"] as? String ?: "Not Stated"
+                phone = profile["phone_number"] as? String ?: "Not Stated"
+                address = profile["address"] as? String ?: "Not Stated"
+                birthDate = profile["date"] as? String ?: "Not Stated"
+                Log.d(
+                    "Extracted Profile Data",
+                    "Name: $name, Email: $email, Phone: $phone, Address: $address, DOB: $birthDate"
+                )
+            }.onFailure { error ->
+                Log.e("UserInfo", error.message ?: "Unknown error")
+            }
+        }
     }
 
     var isLoading by remember { mutableStateOf(false) }
@@ -85,7 +90,8 @@ fun editprofileScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp))
+                    .size(24.dp)
+            )
 
             Text(
                 text = "EDIT PROFILE",
@@ -142,7 +148,7 @@ fun editprofileScreen(navController: NavHostController) {
                 shape = RoundedCornerShape(8.dp)
             )
 
-            // Email Field
+            // Email Field (read-only)
             Text("Email", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             TextField(
                 value = email,
@@ -158,12 +164,15 @@ fun editprofileScreen(navController: NavHostController) {
                     cursorColor = Color.White
                 ),
                 shape = RoundedCornerShape(8.dp),
-                enabled = false // Email can't be changed
+                enabled = false
             )
 
             // Phone Field
             Text(
-                "Phone Number", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                "Phone Number",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
             )
             TextField(
                 value = phone,
@@ -201,7 +210,10 @@ fun editprofileScreen(navController: NavHostController) {
 
             // Birth Date Field
             Text(
-                "Date of Birth", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                "Date of Birth",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
             )
             TextField(
                 value = birthDate,
@@ -228,10 +240,10 @@ fun editprofileScreen(navController: NavHostController) {
                     errorMessage = ""
                     successMessage = ""
 
-                    val uid = currentUser?.uid
-                    if (uid != null) {
+                    val currentUid = currentUser?.uid
+                    if (currentUid != null) {
                         updateUserProfile(
-                            uid = uid,
+                            uid = currentUid,
                             name = name,
                             email = email,
                             address = address,
@@ -244,7 +256,8 @@ fun editprofileScreen(navController: NavHostController) {
                             onFailure = { error ->
                                 isLoading = false
                                 errorMessage = error
-                            })
+                            }
+                        )
                     } else {
                         isLoading = false
                         errorMessage = "User not logged in"

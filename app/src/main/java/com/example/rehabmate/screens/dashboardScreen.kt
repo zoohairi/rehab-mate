@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,7 +49,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.rehabmate.firebase.fetchUserAndExercises
+import com.example.rehabmate.firebase.fetchExercisesForUser
+import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.getUidFromSharedPreferences
 import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.white_color
@@ -99,15 +99,20 @@ fun HomeTab(navController: NavHostController) {
     val userName = remember { mutableStateOf<String?>(null) }
     val exerciseList = remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     val isLoading = remember { mutableStateOf(true) }
+    val errorMessage = remember { mutableStateOf<String?>(null) } // To show error message
 
     // Fetch user info (name) and exercises from Firestore
     LaunchedEffect(uid) {
         if (uid != null) {
-            fetchUserAndExercises(uid = uid, onSuccess = { userData, exercises ->
+            // Fetch user info first
+            val result = fetchUserInfo(uid)  // Fetch user info
+
+            result.onSuccess { userData ->   // Handle success
+                Log.d("UserInfo", userData.toString())
+
                 // Extract user name from the userData map
                 userName.value = when {
                     userData.containsKey("name") -> userData["name"] as? String
-
                     userData.containsKey("profile") -> {
                         val profile = userData["profile"] as? Map<String, Any>
                         profile?.get("name") as? String
@@ -116,21 +121,36 @@ fun HomeTab(navController: NavHostController) {
                     else -> "User"
                 }
 
-                // Set exercises data
-                exerciseList.value = exercises
+                // Extract profile data (e.g., date, address, gender, etc.)
+                val profileData = userData["profile"] as? Map<String, Any>
+                profileData?.let {
+                    val profile = mapOf(
+                        "date" to it["date"],
+                        "address" to it["address"],
+                        "gender" to it["gender"],
+                        "age" to it["age"]
+                    )
+                    Log.d("ProfileData", "Profile: $profile")
+                }
 
-                // Debug log the contents of exerciseList
-                Log.d("HomeTab", "Exercises List: ${exerciseList.value}")
-
-                // Set loading state to false
-                isLoading.value = false
-            }, onFailure = { errorMessage ->
+                // Fetch user exercise from fb
+                fetchExercisesForUser(
+                    uid,
+                    onSuccess = { exercises ->
+                        exerciseList.value = exercises
+                        isLoading.value = false
+                    },
+                    onFailure = { error ->
+                        errorMessage.value = error
+                        isLoading.value = false
+                    })
+            }.onFailure { error ->
                 // Handle error (e.g., show a message or default to a placeholder)
-                Log.e("HomeTab", "Error fetching data: $errorMessage")
+                Log.e("HomeTab", "Error fetching data: ${error.message}")
                 userName.value = "User"
                 exerciseList.value = emptyList() // Empty list in case of error
                 isLoading.value = false
-            })
+            }
         } else {
             isLoading.value = false
         }
@@ -222,169 +242,76 @@ fun HomeTab(navController: NavHostController) {
                             title = "Assessment", onClick = { /* Navigate to assessment */ })
                     }
 
-                    // Graph Visualization section
-                    Card(
+                    // Error handling
+                    errorMessage.value?.let { error ->
+                        Text(
+                            text = error,
+                            color = Color.Red,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    // Exercises section
+                    LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .background(color = blue_color)
                             .padding(vertical = 8.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFF1E1E1E))
-                                .padding(16.dp), contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Graph Visualization",
-                                fontSize = 18.sp,
-                                color = Color.Red,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                        if (exerciseList.value.isEmpty()) {
+                            item {
+                                Text("No exercises available.", color = Color.White)
+                            }
+                        } else {
+                            items(exerciseList.value.size) { index ->
+                                val exercise = exerciseList.value[index]
 
-                    // Your Rehab Exercises section
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Your Rehab Exercises",
-                            modifier = Modifier.padding(top = 10.dp),
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = white_color
-                        )
+                                // Debugging: Log the entire exercise data for inspection
+                                Log.d("ExerciseDebug", "Exercise at index $index: $exercise")
 
-                        Row {
-                            Text(
-                                text = "See All",
-                                fontSize = 14.sp,
-                                color = white_color,
-                                modifier = Modifier.clickable { /* Handle see all click */ })
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "View All",
-                                tint = white_color,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable { /* Handle click */ })
-                        }
-                    }
-                }
+                                // Extracting exercise data
+                                val exerciseTitle =
+                                    exercise["exercise_title"] as? String ?: "No Title"
+                                val subexerciseList =
+                                    exercise["subexercise"] as? List<String> ?: emptyList()
+                                val subexerciseIds =
+                                    subexerciseList.joinToString(", ") // Join the list into a string for logging
+                                val description =
+                                    exercise["description"] as? String ?: "No Description"
+                                val remark = exercise["remark"] as? String ?: description
 
-                // Exercise items section
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (exerciseList.value.isEmpty()) {
-                        item {
-                            Text("No exercises available.", color = Color.White)
-                        }
-                    } else {
-                        items(exerciseList.value.size) { index ->
-                            val exercise = exerciseList.value[index]
+                                Log.d(
+                                    "ExerciseDebug",
+                                    "Title: $exerciseTitle, Subexercise IDs: $subexerciseIds, Description: $description, Remark: $remark"
+                                )
 
-                            // Extract exercise information from the nested structure
-                            val exerciseMap = exercise["exercise"] as? Map<String, Any>
-                            val title = when {
-                                exerciseMap != null && exerciseMap.containsKey("exercise_title") -> exerciseMap["exercise_title"] as? String
-                                    ?: "No Title"
+                                // Creating ExerciseItem UI
+                                ExerciseItem(
+                                    title = exerciseTitle,
+                                    subtitle = remark,
+                                    onClick = {
+                                        // Debugging: Log the exercise ID when clicked
+                                        val exerciseId = exercise["id"] as? String
+                                        Log.d("ExerciseDebug", "Exercise clicked: $exerciseId")
 
-                                exercise.containsKey("exercise_title") -> exercise["exercise_title"] as? String
-                                    ?: "No Title"
-
-                                else -> "No Title"
+                                        // Navigate to exercise detail with the exercise ID
+                                        if (exerciseId != null) {
+                                            // You can navigate to a detail screen with the ID
+                                            // navController.navigate("exerciseDetail/$exerciseId")
+                                        }
+                                    }
+                                )
                             }
 
-                            val description = exercise["description"] as? String ?: "No Description"
-                            val remark = when {
-                                exerciseMap != null && exerciseMap.containsKey("remark") -> exerciseMap["remark"] as? String
-
-                                exercise.containsKey("remark") -> exercise["remark"] as? String
-
-                                else -> null
-                            } ?: description
-
-                            ExerciseItem(
-                                title = title, subtitle = remark, onClick = {
-                                    // Navigate to exercise detail with the exercise ID
-                                    val exerciseId = exercise["id"] as? String
-                                    if (exerciseId != null) {
-                                        // You can navigate to a detail screen with the ID
-                                        // navController.navigate("exerciseDetail/$exerciseId")
-                                    }
-                                })
                         }
                     }
-                }
-
-                // Continue Exercise section
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Continue Exercise",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = white_color
-                    )
-
-                    Row {
-                        Text(
-                            text = "See All",
-                            fontSize = 14.sp,
-                            color = white_color,
-                            modifier = Modifier.clickable { /* Handle see all click */ })
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "View All",
-                            tint = white_color,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable { /* Handle click */ })
-                    }
-                }
-
-                // Continue buttons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ContinueButton(
-                        title = "Squat Exercise",
-                        subtitle = "Leg exercises",
-                        onClick = { /* Handle continue click */ },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    ContinueButton(
-                        title = "Upper Exercise",
-                        subtitle = "Shoulder rehab",
-                        onClick = { /* Handle continue click */ },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
@@ -810,6 +737,7 @@ fun ExerciseListTab(navController: NavHostController) {
         }
     }
 }
+
 
 @Composable
 fun ExerciseItem(exercise: Map<String, Any>) {
