@@ -1,5 +1,6 @@
 package com.example.rehabmate.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,13 +17,145 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.rehabmate.MainActivity
+import com.example.rehabmate.firebase.fetchExercisesForUser
+import com.example.rehabmate.firebase.getUidFromSharedPreferences
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import Exercise
+import RetrofitInstance
+import kotlinx.coroutines.tasks.await
+
+// Data class for API exercise with additional fields
+data class ApiExercise(
+    val name: String,
+    val type: String,
+    val muscle: String,
+    val equipment: String,
+    val difficulty: String,
+    val instructions: String,
+    val mainExercise: String = "",
+    val exerciseTitle: String = ""
+)
+
+// Data class for grouping exercises by muscle
+data class ExerciseGroup(
+    val muscle: String,
+    val exerciseTitle: String,
+    val type: String,
+    val remark: String,
+    val apiExercises: List<ApiExercise> = emptyList()
+)
 
 @Composable
 fun BeginnerExerciseScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // State to hold exercise groups
+    var exerciseGroups by remember { mutableStateOf<List<ExerciseGroup>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Try to initialize RetrofitInstance if context is MainActivity
+    LaunchedEffect(Unit) {
+        if (context is MainActivity) {
+            RetrofitInstance.initialize(context)
+        }
+    }
+
+    // Fetch exercises when screen first loads
+    LaunchedEffect(Unit) {
+        val uid = getUidFromSharedPreferences(context)
+
+        if (uid == null) {
+            errorMessage = "User not logged in"
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        // Using the fetchExercisesForUser function from FirebaseHelper.kt
+        fetchExercisesForUser(uid, { exercisesList ->
+            // Process the exercises from Firebase
+            coroutineScope.launch {
+                try {
+                    val groups = mutableListOf<ExerciseGroup>()
+
+                    // For each exercise document
+                    exercisesList.forEachIndexed { index, exerciseData ->
+                        val id = exerciseData["id"] as? String ?: return@forEachIndexed
+                        val title = exerciseData["exercise_title"] as? String ?: "Untitled Exercise"
+                        val type = exerciseData["Type"] as? String ?: "Unknown"
+                        val remark = exerciseData["remark"] as? String ?: ""
+
+                        // Extract keyword_api data
+                        val keywordApiMap = exerciseData["keyword_api"] as? Map<String, Any>
+                        val muscles = (keywordApiMap?.get("Muscle") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+
+                        if (muscles.isNotEmpty()) {
+                            // For each muscle, create a group and fetch API exercises
+                            muscles.forEach { muscle ->
+                                fetchExercisesFromApi(muscle, type) { apiExercises ->
+                                    val enhancedApiExercises = apiExercises.map { apiExercise ->
+                                        ApiExercise(
+                                            name = apiExercise.name,
+                                            type = apiExercise.type,
+                                            muscle = apiExercise.muscle,
+                                            equipment = apiExercise.equipment,
+                                            difficulty = apiExercise.difficulty,
+                                            instructions = apiExercise.instructions,
+                                            mainExercise = muscle,
+                                            exerciseTitle = title
+                                        )
+                                    }
+
+                                    val group = ExerciseGroup(
+                                        muscle = muscle,
+                                        exerciseTitle = title,
+                                        type = type,
+                                        remark = remark,
+                                        apiExercises = enhancedApiExercises
+                                    )
+
+                                    groups.add(group)
+
+                                    // If this is the last one, update the UI
+                                    if (index == exercisesList.size - 1) {
+                                        exerciseGroups = groups.sortedBy { it.muscle }
+                                        isLoading = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If the list is empty, make sure to update loading state
+                    if (exercisesList.isEmpty()) {
+                        isLoading = false
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("BeginnerExerciseScreen", "Error processing exercises: ${e.message}")
+                    errorMessage = "Error loading exercises: ${e.message}"
+                    isLoading = false
+                }
+            }
+        }, { error ->
+            errorMessage = error
+            isLoading = false
+        })
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -40,12 +173,193 @@ fun BeginnerExerciseScreen(navController: NavHostController) {
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            // Exercise List Screen displayed in the sketch
-            ExerciseListScreen(navController)
+            if (isLoading) {
+                // Show loading indicator
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color(0xFF6200EE)
+                )
+            } else if (errorMessage != null) {
+                // Show error message
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Error: $errorMessage",
+                        color = Color.Red,
+                        fontSize = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = { isLoading = true /* Retry logic here */ },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+                    ) {
+                        Text("Retry")
+                    }
+                }
+            } else if (exerciseGroups.isEmpty()) {
+                // Show empty state
+                Text(
+                    text = "No exercises found",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp)
+                )
+            } else {
+                // Show exercise groups
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Difficulty filters
+                    item {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(listOf("All", "Beginner", "Intermediate", "Advanced")) { difficulty ->
+                                DifficultyChip(
+                                    text = difficulty,
+                                    isSelected = difficulty == "All",
+                                    onClick = { /* Filter by difficulty */ }
+                                )
+                            }
+                        }
+                    }
+
+                    // Featured exercise (first one)
+                    item {
+                        if (exerciseGroups.isNotEmpty() && exerciseGroups[0].apiExercises.isNotEmpty()) {
+                            val featuredExercise = exerciseGroups[0].apiExercises[0]
+                            FeaturedExerciseCard(
+                                title = featuredExercise.exerciseTitle,
+                                muscle = featuredExercise.muscle,
+                                type = featuredExercise.type,
+                                onClick = { /* Navigate to detail */ }
+                            )
+                        }
+                    }
+
+                    // Group sections
+                    items(exerciseGroups) { group ->
+                        ExerciseGroupSection(
+                            group = group,
+                            navController = navController
+                        )
+                    }
+                }
+            }
         }
 
         // Bottom Navigation
         BottomNavigation(navController)
+    }
+}
+
+@Composable
+fun ExerciseGroupSection(group: ExerciseGroup, navController: NavHostController) {
+    Column {
+        // Group header with muscle name
+        Text(
+            text = "${group.muscle} - ${group.exerciseTitle}",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Type and remark info
+        Text(
+            text = "Type: ${group.type}",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+
+        Text(
+            text = "Remark: ${group.remark}",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // API Exercises in this group
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.heightIn(max = 300.dp)
+        ) {
+            items(group.apiExercises) { exercise ->
+                ApiExerciseItem(
+                    exercise = exercise,
+                    onClick = {
+                        // Navigate to detailed view with instructions
+                        navController.navigate("exerciseDetail/${exercise.name}")
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ApiExerciseItem(exercise: ApiExercise, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF303030))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Exercise name
+            Text(
+                text = exercise.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Exercise details
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Difficulty: ${exercise.difficulty}",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+
+                    Text(
+                        text = "Equipment: ${exercise.equipment}",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text("View")
+                }
+            }
+        }
     }
 }
 
@@ -69,11 +383,11 @@ fun TopAppBar(
                 contentDescription = "Back",
                 tint = Color(0xFF6200EE),
                 modifier = Modifier
-                    .clickable { /* Handle back navigation */ }
+                    .clickable { navController.navigateUp() }
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "Beginner",
+                text = "Exercise Library",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF6200EE)
@@ -91,15 +405,6 @@ fun TopAppBar(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable { /* Handle notifications */ }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = "Profile",
                 tint = Color.White,
@@ -107,94 +412,6 @@ fun TopAppBar(
                     .size(24.dp)
                     .clickable { /* Handle profile */ }
             )
-        }
-    }
-}
-
-@Composable
-fun ExerciseListScreen(navController: NavHostController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        // Exercise Difficulty Tabs
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(listOf("Beginner", "Intermediate", "Advanced")) { difficulty ->
-                DifficultyChip(
-                    text = difficulty,
-                    isSelected = difficulty == "Beginner",
-                    onClick = { /* Handle difficulty selection */ }
-                )
-            }
-        }
-
-        // Featured Exercise Card
-        FeaturedExerciseCard(
-            title = "Exercise History",
-            onClick = { /* Handle featured exercise click */ }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Round 1 Header
-        Text(
-            text = "Round 1",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-
-        // Round 1 Exercises
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(0.5f)
-        ) {
-            items(
-                listOf(
-                    ExerciseData("Dumbbell Rows", 1),
-                    ExerciseData("Russian Twists", 2),
-                    ExerciseData("Squats", 3)
-                )
-            ) { exercise ->
-                RoundExerciseItem(
-                    exercise = exercise,
-                    onClick = { /* Handle exercise click */ }
-                )
-            }
-        }
-
-        // Round 2 Header
-        Text(
-            text = "Round 2",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-
-        // Round 2 Exercises
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(0.5f)
-        ) {
-            items(
-                listOf(
-                    ExerciseData("Tabata Intervals", 1),
-                    ExerciseData("Bicycle Crunches", 2)
-                )
-            ) { exercise ->
-                RoundExerciseItem(
-                    exercise = exercise,
-                    onClick = { /* Handle exercise click */ }
-                )
-            }
         }
     }
 }
@@ -227,6 +444,8 @@ fun DifficultyChip(
 @Composable
 fun FeaturedExerciseCard(
     title: String,
+    muscle: String,
+    type: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -250,7 +469,7 @@ fun FeaturedExerciseCard(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "Exercise History",
+                    text = "Featured",
                     fontSize = 10.sp,
                     color = Color.Black,
                     fontWeight = FontWeight.Bold
@@ -273,11 +492,11 @@ fun FeaturedExerciseCard(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(8.dp)
+                    .padding(16.dp)
             ) {
                 Text(
-                    text = "Full-Body Training",
-                    fontSize = 16.sp,
+                    text = title,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -287,7 +506,7 @@ fun FeaturedExerciseCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "30 Minutes",
+                        text = muscle,
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -300,72 +519,12 @@ fun FeaturedExerciseCard(
                     )
 
                     Text(
-                        text = "5 Exercises",
+                        text = type,
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
                 }
             }
-        }
-    }
-}
-
-data class ExerciseData(
-    val name: String,
-    val repetition: Int
-)
-
-@Composable
-fun RoundExerciseItem(
-    exercise: ExerciseData,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(50.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF303030))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Exercise circle icon
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF6200EE)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = exercise.repetition.toString(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Exercise name
-            Text(
-                text = exercise.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp)
-            )
-
-            // Repetition info
-            Text(
-                text = "Repetition ${exercise.repetition}",
-                fontSize = 14.sp,
-                color = Color(0xFF6200EE)
-            )
         }
     }
 }
@@ -383,28 +542,28 @@ fun BottomNavigation(navController: NavHostController) {
             icon = Icons.Default.Home,
             label = "Home",
             isSelected = false,
-            onClick = { /* Handle navigation */ }
+            onClick = { navController.navigate("home") }
         )
 
         BottomNavigationItem(
             icon = Icons.Default.DateRange,
             label = "Plan",
             isSelected = false,
-            onClick = { /* Handle navigation */ }
+            onClick = { navController.navigate("plan") }
         )
 
         BottomNavigationItem(
             icon = Icons.Default.Star,
-            label = "Favorites",
+            label = "Exercises",
             isSelected = true,
-            onClick = { /* Handle navigation */ }
+            onClick = { /* Already on exercise screen */ }
         )
 
         BottomNavigationItem(
             icon = Icons.Default.Person,
             label = "Profile",
             isSelected = false,
-            onClick = { /* Handle navigation */ }
+            onClick = { navController.navigate("profile") }
         )
     }
 }
@@ -434,5 +593,51 @@ fun BottomNavigationItem(
             fontSize = 12.sp,
             color = if (isSelected) Color.White else Color.Gray
         )
+    }
+}
+
+// Function to fetch exercises from API using RetrofitInstance
+private fun fetchExercisesFromApi(muscle: String, type: String, callback: (List<Exercise>) -> Unit) {
+    RetrofitInstance.api.getExercises(muscle).enqueue(object : Callback<List<Exercise>> {
+        override fun onResponse(call: Call<List<Exercise>>, response: Response<List<Exercise>>) {
+            if (response.isSuccessful) {
+                // Filter by type if needed
+                val exercises = response.body() ?: emptyList()
+                val filteredExercises = if (type.isEmpty() || type.equals("all", ignoreCase = true)) {
+                    exercises
+                } else {
+                    exercises.filter { it.type.equals(type, ignoreCase = true) }
+                }
+
+                callback(filteredExercises)
+            } else {
+                Log.e("API Error", "Failed to fetch exercises. Response code: ${response.code()}")
+                callback(emptyList())
+            }
+        }
+
+        override fun onFailure(call: Call<List<Exercise>>, t: Throwable) {
+            Log.e("API Error", "Error fetching exercises: ${t.message}")
+            callback(emptyList())
+        }
+    })
+}
+
+// Helper function to fetch subexercises for a given exercise from Firestore
+suspend fun fetchSubExercises(exerciseId: String): List<String> {
+    val db = FirebaseFirestore.getInstance()
+    val exerciseRef = db.collection("Exercises").document(exerciseId)
+
+    return try {
+        val exerciseDoc = exerciseRef.get().await()
+        if (exerciseDoc.exists()) {
+            val subexerciseList = exerciseDoc.get("subexercise") as? List<String> ?: emptyList()
+            subexerciseList
+        } else {
+            emptyList()
+        }
+    } catch (e: Exception) {
+        Log.e("Firestore", "Error fetching subexercises: ${e.message}")
+        emptyList()
     }
 }
