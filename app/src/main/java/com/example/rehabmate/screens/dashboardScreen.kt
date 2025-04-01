@@ -61,6 +61,10 @@ import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.red_color
 import com.example.rehabmate.ui.theme.white_color
 import com.google.firebase.firestore.FirebaseFirestore
+import ai.onnxruntime.*
+import android.content.Context
+import com.google.firebase.Timestamp
+import java.nio.FloatBuffer
 
 @Composable
 fun DashboardScreen(navController: NavHostController) {
@@ -224,6 +228,10 @@ fun HomeTab(navController: NavHostController) {
                         }
                     }
 
+                    Column {
+                        ProgressByAI(context)
+                    }
+
                     // Feature cards section
                     Row(
                         modifier = Modifier
@@ -276,7 +284,6 @@ fun HomeTab(navController: NavHostController) {
                             )
                         }
                     }
-
 
                     // Exercises section
                     Row(
@@ -452,11 +459,11 @@ fun ExerciseItem(
     title: String,
     subtitle: String,
     onClick: () -> Unit
-) { // Fix: onClick should be a lambda, not a @Composable function
+) {
     Card(
         modifier = Modifier
             .width(160.dp)
-            .clickable(onClick = onClick), // Fix: directly use onClick
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
@@ -519,7 +526,7 @@ fun ExerciseDemoTab(navController: NavHostController) {
                 contentDescription = "Back",
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable { navController.popBackStack() } // Corrected to pop back to the previous screen
+                    .clickable { navController.popBackStack() }
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
@@ -902,7 +909,6 @@ fun ExerciseItem(exercise: Map<String, Any>) {
     }
 }
 
-
 //Get status Color
 fun getStatusTextStyle(status: String): TextStyle {
     val color = when (status.lowercase()) {
@@ -916,3 +922,115 @@ fun getStatusTextStyle(status: String): TextStyle {
         TextStyle(color = color)
     }
 }
+
+// i need a composable that retrieves all the input data from fireback onLaunch.
+// pass the inputdata into loadONNXmodel and then display the data in the composable
+@Composable
+fun ProgressByAI(context: Context) {
+    val db = FirebaseFirestore.getInstance()
+
+    val userAge = remember { mutableStateOf<Int?>(null) }
+    val approvedActivities = remember { mutableStateOf<List<String>>(emptyList()) }
+    val approvedCount = remember { mutableStateOf(0) }
+    val totalDays = remember { mutableStateOf(0) }
+    val totalProgression = remember { mutableStateOf(0) }
+
+    val uid = getUidFromSharedPreferences(context)
+
+    LaunchedEffect(uid) {
+        uid?.let { safeUid ->
+            db.collection("user_info").document(safeUid).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        val userData = document.data
+                        Log.d("ProgressByAI", "User Data: $userData")
+
+                        // Extract age
+                        val profile = userData?.get("profile") as? Map<String, Any>
+                        val age = profile?.get("age") as? Long  // Firestore stores numbers as Long
+                        userAge.value = age?.toInt()  // Convert Long to Int and store in state
+
+                        // Extract number of active activities
+                        val activityList = userData?.get("Activity") as? List<Map<String, Any>>
+                        val approved = activityList?.filter { it["status"] == "Approved" } ?: emptyList()
+                        val approvedCodes = approved.mapNotNull { it["code"] as? String }
+
+                        // Calculate total days for all active activities
+                        val totalDuration = approved.sumOf { activity ->
+                            val startTimestamp = activity["start_date"] as? Timestamp
+                            val endTimestamp = activity["end_date"] as? Timestamp
+
+                            if (startTimestamp != null && endTimestamp != null) {
+                                val startDate = startTimestamp.toDate()
+                                val endDate = endTimestamp.toDate()
+
+                                // Ensure startDate is before endDate
+                                val (correctStartDate, correctEndDate) = if (startDate.after(endDate)) {
+                                    endDate to startDate  // Swap if incorrectly ordered
+                                } else {
+                                    startDate to endDate
+                                }
+
+                                // Calculate days between dates
+                                val diffInMillis = correctEndDate.time - correctStartDate.time
+                                (diffInMillis / (1000 * 60 * 60 * 24)).toInt()
+                            } else {
+                                0
+                            }
+                        }
+
+                        // Progression
+                        val progression = userData?.get("progression") as? Map<String, Any> ?: emptyMap()
+                        val totalProgressionValue = approvedCodes.sumOf { code ->
+                            (progression[code] as? Number)?.toInt() ?: 0
+                        } / 100
+
+                        approvedActivities.value = approvedCodes
+                        approvedCount.value = approvedCodes.size
+                        totalDays.value = totalDuration
+                        totalProgression.value = totalProgressionValue
+                    } else {
+                        Log.e("ProgressByAI", "No user found with this UID")
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    Log.e("ProgressByAI", "Error fetching user data: ${exception.message}")
+                }
+        } ?: Log.e("ProgressByAI", "UID is null, cannot fetch data")
+    }
+
+    Column {
+        Text(text = "User Age: ${userAge.value ?: "Loading..."}")
+        Text(text = "Approved Activity Codes: ${approvedActivities.value.joinToString(", ")}")
+        Text(text = "Total Approved Activities: ${approvedCount.value}")
+        Text(text = "Total Activity Duration: ${totalDays.value} days")
+        Text(text = "Total Exercise Adherence: ${totalProgression.value}%")
+    }
+}
+
+//fun loadONNXModel(context: Context, inputData: FloatArray): FloatArray? {
+//    return try {
+//        val ortEnv = OrtEnvironment.getEnvironment()
+//        val session = ortEnv.createSession(context.assets.open("model.onnx").readBytes())
+//
+//        val inputName = session.inputNames.first()
+//        val shape = longArrayOf(1, inputData.size.toLong())
+//
+//        // Convert FloatArray to FloatBuffer
+//        val floatBuffer = FloatBuffer.allocate(inputData.size)
+//        floatBuffer.put(inputData)
+//        floatBuffer.rewind()
+//
+//        val inputTensor = OnnxTensor.createTensor(ortEnv, floatBuffer, shape)
+//        val outputs = session.run(mapOf(inputName to inputTensor))
+//
+//        val outputArray = (outputs[0].value as Array<FloatArray>)[0]
+//        outputs.close()
+//        session.close()
+//
+//        outputArray
+//    } catch (e: Exception) {
+//        Log.e("ONNX", "Model loading failed: ${e.localizedMessage}")
+//        null
+//    }
+//}

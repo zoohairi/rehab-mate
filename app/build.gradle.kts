@@ -86,6 +86,9 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")  // time of writing
     implementation("androidx.constraintlayout:constraintlayout:2.1.4") //  constraint layout
 
+    // Machine learning
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.21.0")
+
     // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
