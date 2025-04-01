@@ -65,15 +65,37 @@ fun AppointmentScreen(navController: NavHostController) {
     LaunchedEffect(user) {
         user?.let {
             fetchUserAppointments(it.uid, { appointmentList ->
-                // current issue is appoint are in timestamp data-tpye and got error
+                // convert => "MM/dd/yyyy" and "hh:mm a" (AM/PM format)
+                val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+                val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+
                 // Save fetched appointments to the state
                 appointments = appointmentList.map { appointment ->
+                    // formatted date from the appointment
+                    val code = appointment["code"] as? String ?: "No Code"
+                    val dateTimeString = appointment["date_time"] as? String ?: "Unknown Date"
+
+                    // Convert the date_time string to a Date object
+                    val dateTime = try {
+                        val dateObject =
+                            SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault()).parse(
+                                dateTimeString
+                            )
+                        val date = dateObject?.let { dateFormatter.format(it) } ?: "Unknown Date"
+                        val time = dateObject?.let { timeFormatter.format(it) } ?: "Unknown Time"
+
+                        mapOf("date" to date, "time" to time)
+                    } catch (e: Exception) {
+                        mapOf("date" to "Unknown Date", "time" to "Unknown Time")
+                    }
+
+                    // Create AppointmentData object
                     AppointmentData(
                         id = "no Id",
                         doctorName = "Doctor Name",
                         specialty = "Specialty",
-                        date = appointment.toString(),
-                        time = appointment.toString(),
+                        date = dateTime["date"] ?: "Unknown Date",
+                        time = dateTime["time"] ?: "Unknown Time",
                         location = "No Location"
                     )
                 }

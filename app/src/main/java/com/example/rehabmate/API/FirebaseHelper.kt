@@ -3,10 +3,13 @@ package com.example.rehabmate.firebase
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Firebase authentication
 fun loginUser(
@@ -186,13 +189,13 @@ fun getUidFromSharedPreferences(context: Context): String? {
     return sharedPreferences.getString("user_uid", null)
 }
 
-// New utility function to check if user is logged in
+// check if user is logged in
 fun isUserLoggedIn(): Boolean {
     val currentUser = FirebaseAuth.getInstance().currentUser
     return currentUser != null
 }
 
-// New utility function to log out user
+// log out user
 fun logoutUser(onComplete: () -> Unit) {
     FirebaseAuth.getInstance().signOut()
     onComplete()
@@ -285,17 +288,44 @@ fun registerUser(
     }
 }
 
-//retrieve user appointments
+//getting user's appointments
 fun fetchUserAppointments(
-    uid: String, onSuccess: (List<Map<String, Any>>) -> Unit, onFailure: (String) -> Unit
+    uid: String,
+    onSuccess: (List<Map<String, Any>>) -> Unit,
+    onFailure: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     val userRef = db.collection("user_info").document(uid)
 
     userRef.get().addOnSuccessListener { userDoc ->
         if (userDoc.exists()) {
-            val profile = userDoc.get("profile") as? Map<String, Any>
-            val appointments = profile?.get("appointment") as? List<Map<String, Any>> ?: emptyList()
+            val profile = userDoc.data?.get("profile") as? Map<*, *> ?: emptyMap<Any, Any>()
+            Log.d("ProfileData", profile.toString())
+
+            val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
+
+            // Convert timestamps to formatted date strings
+            val dateFormatter = SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
+
+            val appointments = rawAppointments.mapNotNull {
+                when (it) {
+                    is Map<*, *> -> {
+                        val code = it["code"] as? String ?: "Unknown Code"
+                        val timestamp = it["date_time"] as? Timestamp
+                        val formattedDate =
+                            timestamp?.let { dateFormatter.format(it.toDate()) } ?: "Unknown Date"
+
+                        mapOf(
+                            "code" to code,
+                            "date_time" to formattedDate
+                        )
+                    }
+
+                    else -> null
+                }
+            }
+
+            Log.d("Appointments", appointments.toString())
             onSuccess(appointments)
         } else {
             onFailure("No user found with the given UID.")
@@ -304,7 +334,6 @@ fun fetchUserAppointments(
         onFailure("Error fetching appointments: ${exception.message}")
     }
 }
-
 
 // Function to store UID in SharedPreferences
 fun storeUidInSharedPreferences(uid: String, context: Context) {
