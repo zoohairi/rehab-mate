@@ -158,7 +158,7 @@ fun ProfileScreen(navController: NavHostController) {
         MenuOption(
             icon = Icons.Default.Person,
             title = "Your Medical Records",
-            onClick = { /* Navigate to medical records */ })
+            onClick = { navController.navigate("medical_records_screen") })
 
         MenuOption(
             icon = Icons.Default.Person,

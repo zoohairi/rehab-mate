@@ -20,7 +20,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -44,16 +46,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.rehabmate.firebase.fetchExercisesForUser
 import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.getUidFromSharedPreferences
 import com.example.rehabmate.ui.theme.blue_color
+import com.example.rehabmate.ui.theme.red_color
 import com.example.rehabmate.ui.theme.white_color
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -82,9 +87,9 @@ fun DashboardScreen(navController: NavHostController) {
         // Content based on selected tab
         when (selectedTab) {
             0 -> HomeTab(navController)
-            1 -> ExerciseInfoTab(navController) // the exercise use selected from dashboard will lead to a page to show the exercise information
+//            1 -> ExerciseInfoTab(navController) // the exercise use selected from dashboard will lead to a page to show the exercise information
             2 -> ExerciseListTab(navController) // not sure about this page yet
-            3 -> ExerciseDemoTab(navController) // should like this page to ExerciseInfoTab (the exercise it self, should have the timer + TTS in this screen)
+//            3 -> ExerciseDemoTab(navController) // should like this page to ExerciseInfoTab (the exercise it self, should have the timer + TTS in this screen)
         }
     }
 }
@@ -184,20 +189,7 @@ fun HomeTab(navController: NavHostController) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier.width(100.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Notifications",
-                                    tint = Color.White,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clickable { /* Handle click */ })
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    tint = Color.White,
-                                    contentDescription = "Search",
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clickable { /* Handle click */ })
+                                //User's profile
                                 Icon(
                                     imageVector = Icons.Default.AccountCircle,
                                     tint = Color.White,
@@ -206,7 +198,28 @@ fun HomeTab(navController: NavHostController) {
                                         .size(24.dp)
                                         .clickable {
                                             navController.navigate("profile_screen")
-                                        })
+                                        }
+                                )
+
+                                // Add Referral Code
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    tint = Color.White,
+                                    contentDescription = "Add referral Code",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle add referral code click */ }
+                                )
+
+                                // Sign Out
+                                Icon(
+                                    imageVector = Icons.Default.ExitToApp,
+                                    contentDescription = "Sign out",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle sign out click */ }
+                                )
                             }
                         }
                     }
@@ -219,14 +232,16 @@ fun HomeTab(navController: NavHostController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         FeatureCard(
-                            title = "Exercise", onClick = { /* Navigate to exercise section */ })
+                            title = "View Appointments",
+                            onClick = { navController.navigate("appointment_screen") })
 
                         FeatureCard(
                             title = "Progress Tracking",
                             onClick = { /* Navigate to progress tracking */ })
 
                         FeatureCard(
-                            title = "Assessment", onClick = { /* Navigate to assessment */ })
+                            title = "Medical Records",
+                            onClick = { navController.navigate("medical_records_screen") })
                     }
 
                     // Error handling
@@ -278,20 +293,21 @@ fun HomeTab(navController: NavHostController) {
                             fontWeight = FontWeight.Bold,
                             color = white_color
                         )
-
-                        Row {
-                            Text(
-                                text = "See All",
-                                fontSize = 14.sp,
-                                color = white_color,
-                                modifier = Modifier.clickable { /* Handle see all click */ })
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "View All",
-                                tint = white_color,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable { /* Handle back navigation */ })
+                        if (exerciseList.value.isNotEmpty()) {
+                            Row {
+                                Text(
+                                    text = "See All",
+                                    fontSize = 14.sp,
+                                    color = white_color,
+                                    modifier = Modifier.clickable { /* Handle see all click */ })
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "View All",
+                                    tint = white_color,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle back navigation */ })
+                            }
                         }
                     }
                     //user's exercise list below
@@ -320,26 +336,21 @@ fun HomeTab(navController: NavHostController) {
                                     exercise["exercise_title"] as? String ?: "No Title"
                                 val subexerciseList =
                                     exercise["subexercise"] as? List<String> ?: emptyList()
-                                val subexerciseIds =
-                                    subexerciseList.joinToString(", ") // Join the list into a string for logging
-                                val description =
-                                    exercise["description"] as? String ?: "No Description"
-                                val remark = exercise["remark"] as? String ?: description
+//                                val subexerciseIds =
+//                                    subexerciseList.joinToString(", ")
+//                                val description =
+//                                    exercise["description"] as? String ?: "No Description"
+//                                val remark = exercise["remark"] as? String ?: description
 
-                                Log.d(
-                                    "ExerciseDebug",
-                                    "Title: $exerciseTitle, Subexercise IDs: $subexerciseIds, Description: $description, Remark: $remark"
-                                )
 
                                 ExerciseItem(
                                     title = exerciseTitle, subtitle = exerciseStatus, onClick = {
                                         val exerciseId = exercise["id"] as? String
                                         Log.d("ExerciseDebug", "Exercise clicked: $exerciseId")
-
+//im here
                                         // Navigate to exercise detail with the exercise ID
                                         if (exerciseId != null) {
-                                            // You can navigate to a detail screen with the ID
-                                            // navController.navigate("exerciseDetail/$exerciseId")
+                                            navController.navigate("exercise_info_tab/$exerciseId")
                                         }
                                     })
                             }
@@ -347,7 +358,7 @@ fun HomeTab(navController: NavHostController) {
                         }
                     }
 
-                    // retrieve & display all the Exercise data also
+                    // retrieve & display all the Exercise data also => (display view all if theres progression exercise)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -361,20 +372,21 @@ fun HomeTab(navController: NavHostController) {
                             fontWeight = FontWeight.Bold,
                             color = white_color
                         )
-
-                        Row {
-                            Text(
-                                text = "See All",
-                                fontSize = 14.sp,
-                                color = white_color,
-                                modifier = Modifier.clickable { /* Handle see all click */ })
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "View All",
-                                tint = white_color,
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable { /* Handle back navigation */ })
+                        if (exerciseList.value.isEmpty()) {
+                            Row {
+                                Text(
+                                    text = "See All",
+                                    fontSize = 14.sp,
+                                    color = white_color,
+                                    modifier = Modifier.clickable { /* Handle see all click */ })
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "View All",
+                                    tint = white_color,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { /* Handle back navigation */ })
+                            }
                         }
                     }
 
@@ -387,43 +399,47 @@ fun HomeTab(navController: NavHostController) {
                     ) {
                         // Check if there are exercises to show for "Continue Exercise"
                         if (exerciseList.value.isNotEmpty()) {
-                            // Display ContinueButton for each exercise
-                            exerciseList.value.take(2).forEachIndexed { index, exercise ->
-                                Log.d("exerciseData123", exercise.toString())
-                                // Extracting exercise data
-                                val exerciseTitle =
-                                    exercise["exercise_title"] as? String ?: "No Title"
-//                                val exerciseSubtitle =
-//                                    exercise["remark"] as? String ?: "No Description"
+                            // Display ContinueButton for each exercise (limit to 2)
+                            exerciseList.value.take(2).forEach { exercise ->
+                                val status = exercise["status"] as? String ?: "Not Started"
 
-                                ContinueButton(
-                                    title = exerciseTitle,
-                                    subtitle = "description here",
-                                    onClick = {
-                                        // Handle continue button click, e.g., navigate to exercise detail
-                                        val exerciseId = exercise["id"] as? String
-                                        Log.d(
-                                            "ContinueButtonDebug",
-                                            "Continue button clicked for $exerciseId"
-                                        )
+                                if (status == "progress") {
+                                    Log.d("exerciseData123", exercise.toString())
 
-                                        // You can navigate to a detail screen for this specific exercise
-                                        if (exerciseId != null) {
-                                            navController.navigate("exerciseDetail/$exerciseId")
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f)
+                                    // Extracting exercise data
+                                    val exerciseTitle =
+                                        exercise["exercise_title"] as? String ?: "No Title"
+
+                                    ContinueButton(
+                                        title = exerciseTitle,
+                                        subtitle = "description here",
+                                        onClick = {
+                                            // Handle continue button click, e.g., navigate to exercise detail
+                                            val exerciseId = exercise["id"] as? String
+                                            Log.d(
+                                                "ContinueButtonDebug",
+                                                "Continue button clicked for $exerciseId"
+                                            )
+
+                                            if (exerciseId != null) {
+                                                navController.navigate("exercise_demo_tab")
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+
+                            // Show message if no "progress" exercises exist
+                            if (exerciseList.value.none { (it["status"] as? String) == "progress" }) {
+                                Text(
+                                    text = "No exercises to continue",
+                                    fontSize = 16.sp,
+                                    color = red_color
                                 )
                             }
-                        } else {
-                            // Show a message if there are no exercises to continue
-                            Text(
-                                text = "No exercises to continue",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = white_color
-                            )
                         }
+
                     }
                 }
             }
@@ -431,14 +447,16 @@ fun HomeTab(navController: NavHostController) {
     }
 }
 
-
 @Composable
-fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
-    // make this clickable and click to =>  ExerciseInfoTab(navController)
+fun ExerciseItem(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) { // Fix: onClick should be a lambda, not a @Composable function
     Card(
         modifier = Modifier
             .width(160.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick), // Fix: directly use onClick
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
@@ -472,14 +490,15 @@ fun ExerciseItem(title: String, subtitle: String, onClick: () -> Unit) {
                 )
 
                 Text(
-                    text = subtitle, fontSize = 12.sp, color = Color.Gray
+                    text = subtitle.uppercase(), // make text uppercase
+                    fontSize = 12.sp,
+                    style = getStatusTextStyle(subtitle) // Apply status style
                 )
-
-
             }
         }
     }
 }
+
 
 @Composable
 fun ExerciseDemoTab(navController: NavHostController) {
@@ -500,7 +519,8 @@ fun ExerciseDemoTab(navController: NavHostController) {
                 contentDescription = "Back",
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable { /* Handle back navigation */ })
+                    .clickable { navController.popBackStack() } // Corrected to pop back to the previous screen
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = "[EXERCISE TOPIC NAME/NUMBER]",
@@ -522,6 +542,12 @@ fun ExerciseDemoTab(navController: NavHostController) {
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
+                    text = "Exercise Demo Screen",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
                     text = "The Screen Must Have A Timer And Implement Of Voice Over",
                     textAlign = TextAlign.Center,
                     color = Color.Red,
@@ -540,6 +566,7 @@ fun ExerciseDemoTab(navController: NavHostController) {
         }
     }
 }
+
 
 @Composable
 fun FeatureCard(
@@ -561,7 +588,9 @@ fun FeatureCard(
         ) {
             // Use a simple icon placeholder instead of specific icons
             Icon(
-                imageVector = Icons.Default.Star, contentDescription = title, tint = Color.Yellow
+                imageVector = Icons.Default.Star,
+                contentDescription = title,
+                tint = Color.Yellow
             )
         }
 
@@ -634,102 +663,12 @@ fun ContinueButton(
 }
 
 @Composable
-fun AllExerciseItem(exercise: Map<String, Any>) {
-    // Safely extract values from the exercise map
-    val exerciseTitle = exercise["exercise_title"] as? String ?: "No Title"
-    val description = exercise["description"] as? String ?: "No description available."
-    val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
-    val duration = exercise["duration"] as? String ?: "No duration"
-    val remark = exercise["remark"] as? String ?: "No remarks"
-    val keywords = exercise["keyword_api"] as? Map<String, Any> ?: emptyMap()
-    val muscles = keywords["Muscle"] as? List<String> ?: emptyList()
-    val types = keywords["Type"] as? List<String> ?: emptyList()
-
-    // State to hold the doctor's names
-    val doctorNames = remember { mutableStateOf<List<String>>(emptyList()) }
-
-    // Fetch the doctor's names asynchronously
-    LaunchedEffect(doctorInCharge) {
-        val names = mutableListOf<String>()
-        val db = FirebaseFirestore.getInstance()
-        doctorInCharge.forEach { doctorUid ->
-            db.collection("Doctors").document(doctorUid).get().addOnSuccessListener { doctorDoc ->
-                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                names.add(doctorName)
-                if (names.size == doctorInCharge.size) {
-                    doctorNames.value = names
-                }
-            }.addOnFailureListener { exception ->
-                Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
-            }
-        }
-    }
-
-    // Display exercise details
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
-        // Title
-        Text(
-            text = exerciseTitle,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        // Description
-        Text(
-            text = description, style = MaterialTheme.typography.bodyMedium
-        )
-
-        // Duration
-        Text(
-            text = "Duration: $duration", style = MaterialTheme.typography.bodySmall
-        )
-
-        // Recommended by (Doctor names)
-        if (doctorNames.value.isNotEmpty()) {
-            Text(
-                text = "Recommended by: ${doctorNames.value.joinToString(", ")}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        } else {
-            Text(
-                text = "Recommended by: Loading...", style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        // Remark
-        Text(
-            text = "Remark: $remark", style = MaterialTheme.typography.bodyMedium
-        )
-
-        // Muscles and exercise types if available
-        if (muscles.isNotEmpty()) {
-            Text(
-                text = "Muscles: ${muscles.joinToString(", ")}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        if (types.isNotEmpty()) {
-            Text(
-                text = "Exercise Types: ${types.joinToString(", ")}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    }
-}
-
-@Composable
-fun ExerciseInfoTab(navController: NavHostController) {
+fun ExerciseInfoTab(navController: NavHostController, exerciseId: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Back navigation
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -741,14 +680,18 @@ fun ExerciseInfoTab(navController: NavHostController) {
                 contentDescription = "Back",
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable { /* Handle back navigation */ })
+                    .clickable {
+                        navController.navigate("home_tab")
+                    }
+            ) // Go back instead of navigating
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "[EXERCISE NAME]", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                text = "Exercise Details: ${exerciseId ?: "Unknown"}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
-        // Exercise information content
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -757,7 +700,7 @@ fun ExerciseInfoTab(navController: NavHostController) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Information About The Exercise Selected From The Home Page",
+                text = "Details for Exercise ID: ${exerciseId ?: "N/A"}",
                 textAlign = TextAlign.Center,
                 color = Color.Red,
                 fontWeight = FontWeight.Bold,
@@ -778,7 +721,8 @@ fun ExerciseListTab(navController: NavHostController) {
     LaunchedEffect(true) {
         db.collection("Exercises").get().addOnSuccessListener { result ->
             val exerciseList = mutableListOf<Map<String, Any>>()
-            val doctorNameMap = mutableMapOf<String, String>() // Map to store doctor UID and name
+            val doctorNameMap =
+                mutableMapOf<String, String>() // Map to store doctor UID and name
 
             for (document in result) {
                 val exercise = document.data
@@ -888,15 +832,16 @@ fun ExerciseItem(exercise: Map<String, Any>) {
         val names = mutableListOf<String>()
         val db = FirebaseFirestore.getInstance()
         doctorInCharge.forEach { doctorUid ->
-            db.collection("Doctors").document(doctorUid).get().addOnSuccessListener { doctorDoc ->
-                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                names.add(doctorName)
-                if (names.size == doctorInCharge.size) {
-                    doctorNames.value = names
+            db.collection("Doctors").document(doctorUid).get()
+                .addOnSuccessListener { doctorDoc ->
+                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
+                    names.add(doctorName)
+                    if (names.size == doctorInCharge.size) {
+                        doctorNames.value = names
+                    }
+                }.addOnFailureListener { exception ->
+                    Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
                 }
-            }.addOnFailureListener { exception ->
-                Log.e("FirebaseError", "Error fetching doctor name: ${exception.message}")
-            }
         }
     }
 
@@ -954,5 +899,20 @@ fun ExerciseItem(exercise: Map<String, Any>) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+
+//Get status Color
+fun getStatusTextStyle(status: String): TextStyle {
+    val color = when (status.lowercase()) {
+        "approved", "progress" -> Color.Green
+        "pending", "closed", "completed" -> Color.Red
+        else -> Color.Gray
+    }
+    return if (status.lowercase() == "completed") {
+        TextStyle(fontWeight = FontWeight.Bold, color = color)
+    } else {
+        TextStyle(color = color)
     }
 }

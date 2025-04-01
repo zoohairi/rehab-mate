@@ -39,11 +39,10 @@ fun NavGraph(
         composable("editProfile_screen") { editprofileScreen(navController) }
 
         // Exercise Screens
-        composable("dashboard_screen") { DashboardScreen(navController) } //for exercise info's'
+        composable("dashboard_screen") { DashboardScreen(navController) }
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
 
-        // FOR TESTING API PURPOSE
         // Speech Screen - Using the proper Composable function
         composable("speechScreen/{instructions}") { backStackEntry ->
             val instructions = backStackEntry.arguments?.getString("instructions") ?: ""
@@ -53,9 +52,7 @@ fun NavGraph(
         composable("exercise_screen_api") {
             ExerciseApiScreen(navController)
         }
-        composable("exerciseInfo_screen/{exercise_name}") {
-            ExerciseInfoTab(navController)
-        }
+
         // Exercise Details Screens
         composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
             val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"
@@ -64,14 +61,24 @@ fun NavGraph(
 
         composable("about_app_screen") { AboutAppScreen(navController) }
         composable("medical_records_screen") {
-            // You can create a placeholder screen or redirect to profile for now
-            ProfileScreen(navController)
+            medicalHistoryScreen(navController)
         }
 
-//        // Exercise History Screen (placeholder)
-//        composable("exercise_history_screen") {
-//            // You can create a placeholder screen or redirect to exercise screen for now
-//            ExerciseScreen(navController)
-//        }
+        // ========== Dashboard tabs ==========
+        //to display exercise details
+        composable("home_tab") { HomeTab(navController) }
+        composable("exercise_info_tab/{exerciseId}") { backStackEntry ->
+            val exerciseId = backStackEntry.arguments?.getString("exerciseId")
+            ExerciseInfoTab(navController, exerciseId)
+        }
+
+        //to exercise page
+        composable("home_tab") { HomeTab(navController) }
+        composable("exercise_demo_tab") { backStackEntry ->
+//            val exerciseId = backStackEntry.arguments?.getString("exerciseId")
+            ExerciseDemoTab(navController)
+        }
+
+
     }
 }
