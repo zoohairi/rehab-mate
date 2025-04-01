@@ -45,14 +45,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.rehabmate.firebase.fetchUserAppointments
+import com.example.rehabmate.firebase.fetchUserAppointmentsAndUpdateState
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+
+//for storing of doctor info
+data class DoctorInfo(
+    val name: String,
+    val specialty: String
+)
+
+//For storing of Appoint Data
+data class AppointmentData(
+    val id: String,
+    val doctors: List<DoctorInfo>,  // Allow multiple doctors
+    val date: String,
+    val time: String,
+    val location: String
+)
 
 @Composable
 fun AppointmentScreen(navController: NavHostController) {
@@ -64,41 +83,9 @@ fun AppointmentScreen(navController: NavHostController) {
 
     LaunchedEffect(user) {
         user?.let {
-            fetchUserAppointments(it.uid, { appointmentList ->
-                // convert => "MM/dd/yyyy" and "hh:mm a" (AM/PM format)
-                val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-                val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
-
-                // Save fetched appointments to the state
-                appointments = appointmentList.map { appointment ->
-                    // formatted date from the appointment
-                    val code = appointment["code"] as? String ?: "No Code"
-                    val dateTimeString = appointment["date_time"] as? String ?: "Unknown Date"
-
-                    // Convert the date_time string to a Date object
-                    val dateTime = try {
-                        val dateObject =
-                            SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault()).parse(
-                                dateTimeString
-                            )
-                        val date = dateObject?.let { dateFormatter.format(it) } ?: "Unknown Date"
-                        val time = dateObject?.let { timeFormatter.format(it) } ?: "Unknown Time"
-
-                        mapOf("date" to date, "time" to time)
-                    } catch (e: Exception) {
-                        mapOf("date" to "Unknown Date", "time" to "Unknown Time")
-                    }
-
-                    // Create AppointmentData object
-                    AppointmentData(
-                        id = "no Id",
-                        doctorName = "Doctor Name",
-                        specialty = "Specialty",
-                        date = dateTime["date"] ?: "Unknown Date",
-                        time = dateTime["time"] ?: "Unknown Time",
-                        location = "No Location"
-                    )
-                }
+            fetchUserAppointmentsAndUpdateState(it.uid, { appointmentList ->
+                appointments = appointmentList
+                Log.d("UpdatedAppointments", appointments.toString())
                 isLoading = false
             }, { error ->
                 Log.e("AppointmentScreen", error)
@@ -155,7 +142,7 @@ fun AppointmentScreen(navController: NavHostController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No appointments scheduled",
+                        text = "No appointments scheduled from the doctor",
                         fontSize = 16.sp,
                         color = Color.Gray,
                         textAlign = TextAlign.Center
@@ -179,6 +166,18 @@ fun AppointmentScreen(navController: NavHostController) {
 
 @Composable
 fun AppointmentCard(appointment: AppointmentData) {
+    val currentDate = LocalDate.now()
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val appointmentDate = LocalDate.parse(appointment.date, dateFormatter)
+    val daysDifference = ChronoUnit.DAYS.between(currentDate, appointmentDate)
+
+    val appointmentStatus = when {
+        daysDifference < 0 -> "Past appointment"
+        daysDifference == 0L -> "Today"
+        daysDifference == 1L -> "Tomorrow"
+        else -> "$daysDifference days left"
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -190,33 +189,57 @@ fun AppointmentCard(appointment: AppointmentData) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Doctor name and specialty
-            Text(
-                text = appointment.doctorName,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            // Display of doctor info
+            appointment.doctors.forEachIndexed { index, doctor ->
+                // Display each doctor and their specialty
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    //point form
+                    Text(
+                        text = "${index + 1}.",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2196F3),
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
 
-            Text(
-                text = appointment.specialty, fontSize = 14.sp, color = Color.Gray
-            )
+                    // Display the doctor's info
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Dr. " + doctor.name.split(" ")
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, //sentence case
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = doctor.specialty.split(" ")
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, //sentence case
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Date and time
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.DateRange,
                     contentDescription = "Date",
                     tint = Color(0xFF2196F3),
                     modifier = Modifier.size(16.dp)
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = "${appointment.date} at ${appointment.time}",
                     fontSize = 14.sp,
@@ -226,49 +249,104 @@ fun AppointmentCard(appointment: AppointmentData) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Location
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.LocationOn,
                     contentDescription = "Location",
                     tint = Color(0xFF2196F3),
                     modifier = Modifier.size(16.dp)
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = appointment.location, fontSize = 14.sp, color = Color.White
-                )
+                Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = { /* Handle cancel */ },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
-                ) {
-                    Text("CANCEL")
+            Text(
+                text = appointmentStatus,
+                fontSize = 14.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (daysDifference == 0L) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(text = "Your appointment is today!", color = Color.Gray)
                 }
+            } else if (daysDifference < 0) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {},
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                    ) {
+                        Text("This appointment has already passed.")
+                    }
+                }
+            }
 
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "Date",
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "${appointment.date} at ${appointment.time}",
+                    fontSize = 14.sp,
+                    color = Color.White
+                )
+            }
 
-                TextButton(
-                    onClick = { /* Handle reschedule */ },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF2196F3))
-                ) {
-                    Text("RESCHEDULE")
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Location",
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = appointmentStatus,
+                fontSize = 14.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (daysDifference == 0L) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(text = "Your appointment is today!", color = Color.Gray)
+                }
+            } else if (daysDifference < 0) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {},
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                    ) {
+                        Text("This appointment has already passed.")
+                    }
                 }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -350,16 +428,6 @@ fun AddAppointmentDialog(onDismiss: () -> Unit, onAddAppointment: () -> Unit) {
 
 // Helper function to get current month name
 fun getCurrentMonth(): String {
-    val dateFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     return dateFormat.format(Date())
 }
-
-// Data class for appointment
-data class AppointmentData(
-    val id: String,
-    val doctorName: String,
-    val specialty: String,
-    val date: String,
-    val time: String,
-    val location: String
-)

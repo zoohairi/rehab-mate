@@ -3,13 +3,17 @@ package com.example.rehabmate.firebase
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
+import com.example.rehabmate.screens.AppointmentData
+import com.example.rehabmate.screens.DoctorInfo
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
-import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+
 
 // Firebase authentication (for login)
 fun loginUser(
@@ -48,7 +52,7 @@ suspend fun fetchUserInfo(uid: String): Result<Map<String, Any>> {
 }
 
 
-//getting user user_Info and retrieve a;; exercise details
+//getting user user_Info and retrieve all exercise details
 suspend fun fetchExercisesForUser(
     uid: String, onSuccess: (List<Map<String, Any>>) -> Unit, onFailure: (String) -> Unit
 ) {
@@ -102,8 +106,7 @@ suspend fun fetchExercisesForUser(
                         exerciseWithDoctors["doctors"] = doctorData
                         exerciseWithDoctors["id"] = code
                         exerciseWithDoctors["userName"] = userName
-                        exerciseWithDoctors["status"] =
-                            exerciseStatusMap[code] ?: "Not Started"
+                        exerciseWithDoctors["status"] = exerciseStatusMap[code] ?: "Not Started"
 
                         exerciseList.add(exerciseWithDoctors)
                         completedCount++
@@ -199,90 +202,164 @@ fun updateUserProfile(
 }
 
 
-// Function to register a new user
-fun fetchUserAppointments(
+// get user's appointment details (format timestamp and ensure it is current time zone (as Firebase stores in UTC+8))
+fun fetchUserAppointmentsAndUpdateState(
     uid: String,
-    onSuccess: (List<Map<String, Any>>) -> Unit,
+    onUpdate: (List<AppointmentData>) -> Unit,
     onFailure: (String) -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     val userRef = db.collection("user_info").document(uid)
 
     userRef.get().addOnSuccessListener { userDoc ->
-        if (userDoc.exists()) {
-            val profile = userDoc.data?.get("profile") as? Map<*, *> ?: emptyMap<Any, Any>()
-            Log.d("ProfileData", profile.toString())
-
-            val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
-
-            // Convert timestamps to formatted date strings
-            val dateFormatter = SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
-
-            val appointments = rawAppointments.mapNotNull {
-                when (it) {
-                    is Map<*, *> -> {
-                        val code = it["code"] as? String ?: "Unknown Code"
-                        val timestamp = it["date_time"] as? Timestamp
-                        val formattedDate =
-                            timestamp?.let { dateFormatter.format(it.toDate()) } ?: "Unknown Date"
-
-                        // Step 1: Retrieve exercise based on code
-                        val exerciseRef = db.collection("Exercises").whereEqualTo("code", code)
-                        exerciseRef.get().addOnSuccessListener { exerciseSnapshot ->
-                            if (exerciseSnapshot.documents.isNotEmpty()) {
-                                val exerciseDoc = exerciseSnapshot.documents[0]
-                                val doctorInCharge =
-                                    exerciseDoc.get("doctor_incharge") as? List<String>
-                                        ?: emptyList()
-
-                                // Step 2: Check doctor details for each doctor_incharge UID
-                                doctorInCharge.forEach { doctorUid ->
-                                    val doctorRef = db.collection("Doctors").document(doctorUid)
-                                    doctorRef.get().addOnSuccessListener { doctorDoc ->
-                                        if (doctorDoc.exists()) {
-                                            val doctorData = doctorDoc.data
-                                            // You can process doctorData here
-                                            Log.d("DoctorData", doctorData.toString())
-                                        } else {
-                                            Log.d("DoctorData", "Doctor doesn't exist")
-                                        }
-                                    }.addOnFailureListener { exception ->
-                                        Log.d(
-                                            "DoctorData",
-                                            "Error retrieving doctor data: ${exception.message}"
-                                        )
-                                    }
-                                }
-                            } else {
-                                Log.d("ExerciseData", "Exercise with code $code doesn't exist.")
-                            }
-                        }.addOnFailureListener { exception ->
-                            Log.d(
-                                "ExerciseData",
-                                "Error fetching exercise data: ${exception.message}"
-                            )
-                        }
-
-                        // Return appointment data after retrieving doctors
-                        mapOf(
-                            "code" to code,
-                            "date_time" to formattedDate
-                        )
-                    }
-
-                    else -> null
-                }
-            }
-
-            Log.d("Appointments", appointments.toString())
-            onSuccess(appointments)
-        } else {
+        if (!userDoc.exists()) {
             onFailure("No user found with the given UID.")
+            return@addOnSuccessListener
         }
+
+        val profile = userDoc.data?.get("profile") as? Map<*, *> ?: emptyMap<Any, Any>()
+        val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
+
+        if (rawAppointments.isEmpty()) {
+            onUpdate(emptyList()) // No appointments
+            return@addOnSuccessListener
+        }
+        //formating of time_stamp and ensure it is current time zone (Firebase stores in UTC+8)
+        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        dateTimeFormatter.timeZone = TimeZone.getTimeZone("UTC")
+
+        val localFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm a", Locale.getDefault())
+        localFormatter.timeZone = TimeZone.getDefault() // Convert to local timezone
+
+        val appointmentsList = mutableListOf<AppointmentData>()
+        var completedAppointments = 0
+        val totalAppointments = rawAppointments.size
+
+        rawAppointments.forEach { appointment ->
+            (appointment as? Map<*, *>)?.let { appointmentMap ->
+                val code = appointmentMap["code"] as? String ?: "Unknown Code"
+                val timestamp = appointmentMap["date_time"] as? Timestamp
+                val formattedDateTime = timestamp?.let {
+                    localFormatter.format(it.toDate())
+                } ?: "Unknown Date/Time"
+
+                val date = formattedDateTime.split(" ")[0] // Extract date part
+                val time =
+                    formattedDateTime.split(" ")[1] + " " + formattedDateTime.split(" ")[2] // Extract time part
+
+                db.collection("Exercises").document(code).get()
+                    .addOnSuccessListener { exerciseDoc ->
+                        val doctorInCharge =
+                            exerciseDoc.get("doctor_incharge") as? List<String> ?: emptyList()
+
+                        if (doctorInCharge.isEmpty()) {
+                            // Add a default "Unknown Doctor"
+                            appointmentsList.add(
+                                AppointmentData(
+                                    id = code,
+                                    doctors = listOf(
+                                        DoctorInfo(
+                                            "Unknown Doctor",
+                                            "Unknown Specialty"
+                                        )
+                                    ),
+                                    date = date,
+                                    time = time,
+                                    location = "Unknown Location"
+                                )
+                            )
+                            completedAppointments++
+                            if (completedAppointments == totalAppointments) {
+                                onUpdate(appointmentsList)
+                            }
+                        } else {
+                            val doctorDetails = mutableListOf<DoctorInfo>()
+                            var completedDoctors = 0
+
+                            doctorInCharge.forEach { doctorUid ->
+                                db.collection("Doctors").document(doctorUid).get()
+                                    .addOnSuccessListener { doctorDoc ->
+                                        if (doctorDoc.exists()) {
+                                            val doctorName =
+                                                doctorDoc.getString("name") ?: "Unknown Doctor"
+                                            val specialtyList = doctorDoc.get("specialty")
+                                            val specialty = when (specialtyList) {
+                                                is String -> specialtyList
+                                                is List<*> -> specialtyList.joinToString(", ")
+                                                else -> "Unknown Specialty"
+                                            }
+
+                                            doctorDetails.add(DoctorInfo(doctorName, specialty))
+                                        }
+
+                                        completedDoctors++
+                                        if (completedDoctors == doctorInCharge.size) {
+                                            appointmentsList.add(
+                                                AppointmentData(
+                                                    id = code,
+                                                    doctors = doctorDetails,  // List of doctors
+                                                    date = date,
+                                                    time = time,
+                                                    location = doctorDoc.getString("location")
+                                                        ?: "Unknown Location"
+                                                )
+                                            )
+                                            completedAppointments++
+                                            if (completedAppointments == totalAppointments) {
+                                                onUpdate(appointmentsList)
+                                            }
+                                        }
+                                    }.addOnFailureListener {
+                                        completedDoctors++
+                                        if (completedDoctors == doctorInCharge.size) {
+                                            completedAppointments++
+                                            if (completedAppointments == totalAppointments) {
+                                                onUpdate(appointmentsList)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                    }.addOnFailureListener {
+                        completedAppointments++
+                        if (completedAppointments == totalAppointments) {
+                            onUpdate(appointmentsList)
+                        }
+                    }
+            }
+        }
+
     }.addOnFailureListener { exception ->
         onFailure("Error fetching appointments: ${exception.message}")
     }
 }
+
+
+//// Helper function to log and update UI when all async tasks complete ( for the fetchUserAppointmentsAndUpdateState())
+//private fun checkAndLogFinalResult(
+//    completedAppointments: Int,
+//    totalAppointments: Int,
+//    appointmentsList: MutableList<AppointmentData>,
+//    onUpdate: (List<AppointmentData>) -> Unit
+//) {
+//    if (completedAppointments == totalAppointments) {
+//        Log.d("FinalAppointmentsList", appointmentsList.toString())  // Log final appointments
+//        onUpdate(appointmentsList)  // Update UI with final list
+//    }
+//}
+//
+//
+//// Function to check if all appointments are processed and log the final result
+//private fun checkAndLogFinalResult(
+//    appointmentsList: MutableList<Map<String, Any>>,
+//    totalAppointments: Int,
+//    onSuccess: (List<Map<String, Any>>) -> Unit
+//) {
+//    if (appointmentsList.size == totalAppointments) {
+//        Log.d("FinalAppointments", appointmentsList.toString())  // Log the final result
+//        onSuccess(appointmentsList)
+//    }
+//}
 
 
 // Function to register a new user
