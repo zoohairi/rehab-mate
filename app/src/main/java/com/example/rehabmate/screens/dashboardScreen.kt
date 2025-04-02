@@ -233,7 +233,6 @@ fun HomeTab(navController: NavHostController) {
                         }
                     }
 
-
                     // Feature cards section
                     Row(
                         modifier = Modifier
@@ -806,7 +805,6 @@ fun ExerciseListTab(navController: NavHostController, status: String?) {
                             Text(
                                 text = (status.toString()),
                                 fontSize = 15.sp,
-                                style = getStatusTextStyle(status.toString())
                             )
                         }
                     }
