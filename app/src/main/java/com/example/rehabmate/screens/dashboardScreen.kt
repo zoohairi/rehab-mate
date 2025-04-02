@@ -65,6 +65,7 @@ import ai.onnxruntime.*
 import android.content.Context
 import com.google.firebase.Timestamp
 import java.nio.FloatBuffer
+import java.util.Optional
 
 @Composable
 fun DashboardScreen(navController: NavHostController) {
@@ -228,10 +229,6 @@ fun HomeTab(navController: NavHostController) {
                         }
                     }
 
-                    Column {
-                        ProgressByAI(context)
-                    }
-
                     // Feature cards section
                     Row(
                         modifier = Modifier
@@ -259,6 +256,12 @@ fun HomeTab(navController: NavHostController) {
                             color = Color.Red,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
+                    }
+
+                    Column(
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        ProgressByAI(context)
                     }
 
                     // Graph Visualization section
@@ -933,6 +936,9 @@ fun ProgressByAI(context: Context) {
     val approvedCount = remember { mutableStateOf(0) }
     val totalDays = remember { mutableStateOf(0) }
     val totalProgression = remember { mutableStateOf(0) }
+    val predictedValue = remember { mutableStateOf<LongArray?>(null) }
+    val predictedString = remember { mutableStateOf<String>("") }
+    val adviceBasedOnPredication = remember { mutableStateOf<String>("") }
 
     val uid = getUidFromSharedPreferences(context)
 
@@ -990,6 +996,31 @@ fun ProgressByAI(context: Context) {
                         approvedCount.value = approvedCodes.size
                         totalDays.value = totalDuration
                         totalProgression.value = totalProgressionValue
+
+                        val inputData = floatArrayOf(
+                            (userAge.value ?: 0).toFloat(),
+                            approvedCount.value.toFloat(),
+                            totalDays.value.toFloat(),
+                            totalProgression.value.toFloat()
+                        )
+
+                        predictedValue.value = loadONNXModel(context, inputData) ?: LongArray(1)
+
+                        val prediction = predictedValue.value?.firstOrNull()
+                        predictedString.value = when (prediction) {
+                            0L -> "Slow"
+                            1L -> "Moderate"
+                            2L -> "Fast"
+                            else -> "No activities are active"
+                        }
+
+                        adviceBasedOnPredication.value = when (prediction) {
+                            0L -> "Keep going! Progress might feel slow right now, but every small step you take is moving you closer to your goal."
+                            1L -> "It’s also important to maintain consistency. Regular progress will help you achieve your goals faster."
+                            2L -> "While fast progress is great, make sure to balance your intensity to avoid burnout. It's important to allow your body time to recover."
+                            else -> "You've completed all your exercises! Well done and we hope InHouse Rehab has guided you well through your rehab!"
+                        }
+
                     } else {
                         Log.e("ProgressByAI", "No user found with this UID")
                     }
@@ -1001,37 +1032,95 @@ fun ProgressByAI(context: Context) {
     }
 
     Column {
-        Text(text = "User Age: ${userAge.value ?: "Loading..."}")
-        Text(text = "Approved Activity Codes: ${approvedActivities.value.joinToString(", ")}")
-        Text(text = "Total Approved Activities: ${approvedCount.value}")
-        Text(text = "Total Activity Duration: ${totalDays.value} days")
-        Text(text = "Total Exercise Adherence: ${totalProgression.value}%")
+        Text(
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            text = "Your Progress"
+        )
+
+        Text(
+            color = Color.White,
+            fontSize = 32.sp,
+            text = predictedString.value,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Text(
+            color = Color.White,
+            modifier = Modifier.padding(top = 4.dp),
+            text = adviceBasedOnPredication.value
+        )
     }
 }
 
-//fun loadONNXModel(context: Context, inputData: FloatArray): FloatArray? {
-//    return try {
-//        val ortEnv = OrtEnvironment.getEnvironment()
-//        val session = ortEnv.createSession(context.assets.open("model.onnx").readBytes())
-//
-//        val inputName = session.inputNames.first()
-//        val shape = longArrayOf(1, inputData.size.toLong())
-//
-//        // Convert FloatArray to FloatBuffer
-//        val floatBuffer = FloatBuffer.allocate(inputData.size)
-//        floatBuffer.put(inputData)
-//        floatBuffer.rewind()
-//
-//        val inputTensor = OnnxTensor.createTensor(ortEnv, floatBuffer, shape)
-//        val outputs = session.run(mapOf(inputName to inputTensor))
-//
-//        val outputArray = (outputs[0].value as Array<FloatArray>)[0]
-//        outputs.close()
-//        session.close()
-//
-//        outputArray
-//    } catch (e: Exception) {
-//        Log.e("ONNX", "Model loading failed: ${e.localizedMessage}")
-//        null
-//    }
-//}
+fun loadONNXModel(context: Context, inputData: FloatArray): LongArray? {
+    try {
+        val ortEnv = OrtEnvironment.getEnvironment()
+        val session = ortEnv.createSession(context.assets.open("model.onnx").readBytes())
+
+        val inputName = session.inputNames.first()
+        val shape = longArrayOf(1, inputData.size.toLong())
+
+        // Convert FloatArray to FloatBuffer
+        val floatBuffer = FloatBuffer.allocate(inputData.size)
+        floatBuffer.put(inputData)
+        floatBuffer.rewind()
+
+        val inputTensor = OnnxTensor.createTensor(ortEnv, floatBuffer, shape)
+        val outputs = session.run(mapOf(inputName to inputTensor))
+
+        // Debugging - Check output names
+        val outputNames = session.outputNames
+        Log.d("ONNX", "Model output names: $outputNames")
+
+        val outputName = session.outputNames.firstOrNull()
+        if (outputName == null) {
+            Log.e("ONNX", "No output name found in the model.")
+            return null
+        }
+
+        val outputOnnxValue = outputs[outputName]
+        if (outputOnnxValue == null) {
+            Log.e("ONNX", "No output found for key: $outputName")
+            return null
+        }
+
+        // Check if the output is an Optional and extract the value
+        if (outputOnnxValue is Optional<*>) {
+            // Log the content of the Optional
+            Log.d("ONNX", "Output Optional contains: ${outputOnnxValue.orElse(null)}")
+
+            // Extract OnnxTensor from the Optional
+            val tensor = outputOnnxValue.orElse(null) as? OnnxTensor
+            if (tensor == null) {
+                Log.e("ONNX", "Output is not an OnnxTensor, it's null inside Optional.")
+                return null
+            }
+
+            // Log the tensor information for debugging
+            Log.d("ONNX", "Tensor Info: ${tensor.info}")
+
+            // Handle extraction for INT64 tensor
+            try {
+                val longBuffer = tensor.longBuffer
+                val result = LongArray(longBuffer.remaining())
+                var i = 0
+                while (longBuffer.hasRemaining()) {
+                    result[i++] = longBuffer.get()
+                }
+                Log.d("ONNX", "Returned INT64 tensor as LongArray")
+                return result
+            } catch (e: Exception) {
+                Log.e("ONNX", "Error extracting INT64 data: ${e.localizedMessage}")
+            }
+        } else {
+            Log.e("ONNX", "Expected Optional<OnnxTensor>, but found: ${outputOnnxValue::class.java}")
+            return null
+        }
+    } catch (e: Exception) {
+        Log.e("ONNX", "Model loading failed: ${e.localizedMessage}")
+        return null
+    }
+    return null
+}
