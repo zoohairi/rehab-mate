@@ -911,19 +911,18 @@ fun ExerciseItem(exercise: Map<String, Any>) {
 
 //Get status Color
 fun getStatusTextStyle(status: String): TextStyle {
-    val color = when (status.lowercase()) {
-        "approved", "progress" -> Color.Green
-        "pending", "closed", "completed" -> Color.Red
+    val color = when (status.uppercase()) {
+        "APPROVED", "PROGRESS" -> Color.Green
+        "PENDING", "CLOSED", "COMPLETED" -> Color.Red
         else -> Color.Gray
     }
-    return if (status.lowercase() == "completed") {
+    return if (status.lowercase() == "COMPLETED") {
         TextStyle(fontWeight = FontWeight.Bold, color = color)
     } else {
         TextStyle(color = color)
     }
 }
 
-// i need a composable that retrieves all the input data from fireback onLaunch.
 // pass the inputdata into loadONNXmodel and then display the data in the composable
 @Composable
 fun ProgressByAI(context: Context) {
@@ -952,7 +951,8 @@ fun ProgressByAI(context: Context) {
 
                         // Extract number of active activities
                         val activityList = userData?.get("Activity") as? List<Map<String, Any>>
-                        val approved = activityList?.filter { it["status"] == "Approved" } ?: emptyList()
+                        val approved =
+                            activityList?.filter { it["status"] == "Approved" } ?: emptyList()
                         val approvedCodes = approved.mapNotNull { it["code"] as? String }
 
                         // Calculate total days for all active activities
@@ -980,7 +980,8 @@ fun ProgressByAI(context: Context) {
                         }
 
                         // Progression
-                        val progression = userData?.get("progression") as? Map<String, Any> ?: emptyMap()
+                        val progression =
+                            userData?.get("progression") as? Map<String, Any> ?: emptyMap()
                         val totalProgressionValue = approvedCodes.sumOf { code ->
                             (progression[code] as? Number)?.toInt() ?: 0
                         } / 100

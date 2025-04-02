@@ -225,7 +225,7 @@ fun fetchUserAppointmentsAndUpdateState(
             return@addOnSuccessListener
         }
         //formating of time_stamp and ensure it is current time zone (Firebase stores in UTC+8)
-        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm a", Locale.getDefault())
         dateTimeFormatter.timeZone = TimeZone.getTimeZone("UTC")
 
         val localFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm a", Locale.getDefault())
