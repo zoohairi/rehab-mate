@@ -166,6 +166,53 @@ fun fetchDoctorsInfo(doctorUids: List<String>, onSuccess: (List<Map<String, Any>
     }
 }
 
+//retrieve sub exercsies base of the exercise Code
+fun getExerciseInfo(
+    exerciseCode: String,
+    onResult: (Map<String, Any>?, List<Map<String, Any>>?) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    Log.d("FirestoreDebug", "Fetching data for Exercise Code: $exerciseCode")
+
+    // Reference to the main exercise document
+    val exerciseRef = db.collection("Exercises").document(exerciseCode)
+
+    exerciseRef.get()
+        .addOnSuccessListener { document ->
+            if (document.exists()) {
+                val exerciseData = document.data
+                Log.d("FirestoreDebug", "Main Exercise Data: $exerciseData")
+
+                // Fetch sub-exercises from sub_exercises collection
+                exerciseRef.collection("sub_exercises").get()
+                    .addOnSuccessListener { subExercisesSnapshot ->
+                        val subExercises =
+                            subExercisesSnapshot.documents.mapNotNull { it.data }
+
+                        Log.d("FirestoreDebug", "Fetched ${subExercises.size} Sub Exercises")
+                        subExercises.forEachIndexed { index, subExercise ->
+                            Log.d("FirestoreDebug", "Sub Exercise $index: $subExercise")
+                        }
+
+                        // Return both main exercise info and sub-exercises
+                        onResult(exerciseData, subExercises)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("FirestoreError", "Error fetching sub-exercises", e)
+                        onResult(exerciseData, null)
+                    }
+            } else {
+                Log.w("FirestoreWarning", "No exercise found for code: $exerciseCode")
+                onResult(null, null)
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("FirestoreError", "Error fetching exercise info", e)
+            onResult(null, null)
+        }
+}
+
 
 // Update user info or create if it doesn't exist
 fun updateUserProfile(
@@ -225,7 +272,7 @@ fun fetchUserAppointmentsAndUpdateState(
             return@addOnSuccessListener
         }
         //formating of time_stamp and ensure it is current time zone (Firebase stores in UTC+8)
-        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm a", Locale.getDefault())
         dateTimeFormatter.timeZone = TimeZone.getTimeZone("UTC")
 
         val localFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm a", Locale.getDefault())
@@ -333,34 +380,6 @@ fun fetchUserAppointmentsAndUpdateState(
         onFailure("Error fetching appointments: ${exception.message}")
     }
 }
-
-
-//// Helper function to log and update UI when all async tasks complete ( for the fetchUserAppointmentsAndUpdateState())
-//private fun checkAndLogFinalResult(
-//    completedAppointments: Int,
-//    totalAppointments: Int,
-//    appointmentsList: MutableList<AppointmentData>,
-//    onUpdate: (List<AppointmentData>) -> Unit
-//) {
-//    if (completedAppointments == totalAppointments) {
-//        Log.d("FinalAppointmentsList", appointmentsList.toString())  // Log final appointments
-//        onUpdate(appointmentsList)  // Update UI with final list
-//    }
-//}
-//
-//
-//// Function to check if all appointments are processed and log the final result
-//private fun checkAndLogFinalResult(
-//    appointmentsList: MutableList<Map<String, Any>>,
-//    totalAppointments: Int,
-//    onSuccess: (List<Map<String, Any>>) -> Unit
-//) {
-//    if (appointmentsList.size == totalAppointments) {
-//        Log.d("FinalAppointments", appointmentsList.toString())  // Log the final result
-//        onSuccess(appointmentsList)
-//    }
-//}
-
 
 // Function to register a new user
 fun registerUser(

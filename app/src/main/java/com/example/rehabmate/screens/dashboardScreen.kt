@@ -1,6 +1,9 @@
 //change screen file name from 'exerciseScreen' to 'dashboard' screen
 package com.example.rehabmate.screens
 
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,9 +26,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,19 +53,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.rehabmate.firebase.fetchExercisesForUser
 import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.getUidFromSharedPreferences
-import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.red_color
 import com.example.rehabmate.ui.theme.white_color
-import com.google.firebase.firestore.FirebaseFirestore
-import ai.onnxruntime.*
-import android.content.Context
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.nio.FloatBuffer
+import java.util.Optional
 
 @Composable
 fun DashboardScreen(navController: NavHostController) {
@@ -92,7 +91,7 @@ fun DashboardScreen(navController: NavHostController) {
         when (selectedTab) {
             0 -> HomeTab(navController)
 //            1 -> ExerciseInfoTab(navController) // the exercise use selected from dashboard will lead to a page to show the exercise information
-            2 -> ExerciseListTab(navController) // not sure about this page yet
+//            2 -> ExerciseListTab(navController,s) // not sure about this page yet
 //            3 -> ExerciseDemoTab(navController) // should like this page to ExerciseInfoTab (the exercise it self, should have the timer + TTS in this screen)
         }
     }
@@ -104,6 +103,7 @@ fun HomeTab(navController: NavHostController) {
 
     // Retrieve UID from SharedPreferences
     val uid = getUidFromSharedPreferences(context)
+    val auth = FirebaseAuth.getInstance()
 
     // States to store the name of the user and exercise list
     val userName = remember { mutableStateOf<String?>(null) }
@@ -222,14 +222,15 @@ fun HomeTab(navController: NavHostController) {
                                     tint = Color.White,
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .clickable { /* Handle sign out click */ }
+                                        .clickable {
+                                            auth.signOut()
+                                            navController.navigate("welcome_screen") {
+                                                popUpTo("welcome_screen") { inclusive = true }
+                                            }
+                                        }
                                 )
                             }
                         }
-                    }
-
-                    Column {
-                        ProgressByAI(context)
                     }
 
                     // Feature cards section
@@ -265,29 +266,12 @@ fun HomeTab(navController: NavHostController) {
                         )
                     }
 
-                    // Graph Visualization section
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .background(color = blue_color)
-                            .padding(vertical = 8.dp),
-                        shape = RoundedCornerShape(12.dp)
+                    Column(
+                        modifier = Modifier.padding(bottom = 16.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFF1E1E1E))
-                                .padding(16.dp), contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Graph Visualization",
-                                fontSize = 18.sp,
-                                color = Color.Red,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        ProgressByAI(context)
                     }
+
 
                     // Exercises section
                     Row(
@@ -361,7 +345,7 @@ fun HomeTab(navController: NavHostController) {
 //im here
                                         // Navigate to exercise detail with the exercise ID
                                         if (exerciseId != null) {
-                                            navController.navigate("exercise_info_tab/$exerciseId")
+                                            navController.navigate("exercise_info_tab/$exerciseStatus")
                                         }
                                     })
                             }
@@ -674,105 +658,46 @@ fun ContinueButton(
 }
 
 @Composable
-fun ExerciseInfoTab(navController: NavHostController, exerciseId: String?) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable {
-                        navController.navigate("home_tab")
-                    }
-            ) // Go back instead of navigating
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "Exercise Details: ${exerciseId ?: "Unknown"}",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Details for Exercise ID: ${exerciseId ?: "N/A"}",
-                textAlign = TextAlign.Center,
-                color = Color.Red,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-    }
-}
-
-
-@Composable
-fun ExerciseListTab(navController: NavHostController) {
+fun ExerciseListTab(navController: NavHostController, status: String?) {
     val db = FirebaseFirestore.getInstance()
     val exercises = remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     val isLoading = remember { mutableStateOf(true) }
 
     // Fetch exercises from Firebase
     LaunchedEffect(true) {
-        db.collection("Exercises").get().addOnSuccessListener { result ->
-            val exerciseList = mutableListOf<Map<String, Any>>()
-            val doctorNameMap =
-                mutableMapOf<String, String>() // Map to store doctor UID and name
+        db.collection("Exercises").get()
+            .addOnSuccessListener { result ->
+                val exerciseList = mutableListOf<Map<String, Any>>()
 
-            for (document in result) {
-                val exercise = document.data
-                val doctorInCharge = exercise["doctor_incharge"] as? List<String> ?: emptyList()
-
-                // Fetch doctor's name if UID exists in the 'Doctors' collection
-                val doctorNames = mutableListOf<String>()
-                doctorInCharge.forEach { doctorUid ->
-                    // Check if doctor name is already fetched
-                    if (doctorNameMap.containsKey(doctorUid)) {
-                        doctorNames.add(doctorNameMap[doctorUid] ?: "Unknown Doctor")
-                    } else {
-                        db.collection("Doctors").document(doctorUid).get()
-                            .addOnSuccessListener { doctorDoc ->
-                                val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-                                doctorNameMap[doctorUid] = doctorName
-                                doctorNames.add(doctorName)
-                            }.addOnFailureListener { exception ->
-                                Log.e(
-                                    "FirebaseError",
-                                    "Error fetching doctor name: ${exception.message}"
-                                )
-                            }
-                    }
+                for (document in result) {
+                    val exerciseTitle = document.getString("exercise_title") ?: "Unknown Title"
+                    val exerciseDescription =
+                        document.getString("description") ?: "Unknown description"
+                    val exerciseRemark =
+                        document.getString("remark") ?: "No remakes"
+                    val exerciseData = mapOf(
+                        "exercise_title" to exerciseTitle,
+                        "description" to exerciseDescription,
+                        "remark" to exerciseRemark
+                    )
+                    exerciseList.add(exerciseData)
                 }
 
-                // Add the exercise details along with doctor names
-                val exerciseWithDoctors = exercise.toMutableMap()
-                exerciseWithDoctors["doctor_names"] = doctorNames
-                exerciseList.add(exerciseWithDoctors)
+                exercises.value = exerciseList
+                isLoading.value = false
             }
-
-            exercises.value = exerciseList
-            isLoading.value = false
-        }.addOnFailureListener { exception ->
-            Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
-            isLoading.value = false
-        }
+            .addOnFailureListener { exception ->
+                Log.e("FirebaseError", "Error fetching exercises: ${exception.message}")
+                isLoading.value = false
+            }
     }
+
+    val mainExerciseTitle =
+        exercises.value.firstOrNull()?.get("exercise_title") as? String ?: "Exercises"
+    val mainExerciseDescription =
+        exercises.value.firstOrNull()?.get("description") as? String ?: "no Description"
+    val mainExerciseRemarks =
+        exercises.value.firstOrNull()?.get("remarks") as? String ?: "No Remarks is Provided"
 
     Column(
         modifier = Modifier
@@ -790,33 +715,149 @@ fun ExerciseListTab(navController: NavHostController) {
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
                 modifier = Modifier
-                    .size(24.dp)
-                    .clickable { /* Handle back navigation */ })
+                    .size(28.dp)
+                    .clickable { navController.navigate("home_tab") }
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "Exercises", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                text = mainExerciseTitle,  // Main exercise name
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
+
         // Show loading or exercise list
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isLoading.value) {
-                CircularProgressIndicator() // Show loading indicator while fetching data
-            } else {
-                LazyColumn(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    items(exercises.value.size) { index ->
-                        val exercise = exercises.value[index]
-                        ExerciseItem(exercise)
+        if (isLoading.value) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)  // Ensure there's space between each item
+            ) {
+                // Exercise Description
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        //description
+                        Column(modifier = Modifier.padding(16.dp)) {
+
+                            Text(
+                                text = "Description:",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = mainExerciseDescription,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = mainExerciseDescription,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+//remarks
+                        Column(modifier = Modifier.padding(16.dp)) {
+
+                            Text(
+                                text = "Remarks:",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = mainExerciseDescription,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = mainExerciseRemarks,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        //Status
+                        Row(
+                            modifier = Modifier.padding(start = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Status: ",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = (status.toString()),
+                                fontSize = 15.sp,
+                            )
+                        }
                     }
                 }
+
+
+                // List of Sub Exercises
+                items(exercises.value.size) { index ->
+                    val exercise = exercises.value[index]
+                    subExerciseItem(exercise, navController)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun subExerciseItem(exercise: Map<String, Any>, navController: NavHostController) {
+    val exerciseTitle = exercise["exercise_title"] as? String ?: "Unknown Exercise"
+    val description = exercise["description"] as? String ?: "No description available."
+
+    // List of items for the exercise details (title, description, etc.)
+    val exerciseDetails = listOf(
+        Pair("Title", exerciseTitle),
+        Pair("Description", description)
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                navController.navigate("exercise_info/${exerciseTitle}") // Navigate to details
+            }
+            .padding(8.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Loop through the list of exercise details and display each
+            exerciseDetails.forEach { (label, content) ->
+                Text(
+                    text = "$label: $content",
+                    fontSize = 16.sp,
+                    fontWeight = if (label == "Title") FontWeight.Bold else FontWeight.Normal,
+                    color = if (label == "Title") Color(0xFF1E88E5) else Color.Gray
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -915,19 +956,18 @@ fun ExerciseItem(exercise: Map<String, Any>) {
 
 //Get status Color
 fun getStatusTextStyle(status: String): TextStyle {
-    val color = when (status.lowercase()) {
-        "approved", "progress" -> Color.Green
-        "pending", "closed", "completed" -> Color.Red
+    val color = when (status.uppercase()) {
+        "APPROVED", "PROGRESS" -> Color.Green
+        "PENDING", "CLOSED", "COMPLETED" -> Color.Red
         else -> Color.Gray
     }
-    return if (status.lowercase() == "completed") {
+    return if (status.lowercase() == "COMPLETED") {
         TextStyle(fontWeight = FontWeight.Bold, color = color)
     } else {
         TextStyle(color = color)
     }
 }
 
-// i need a composable that retrieves all the input data from fireback onLaunch.
 // pass the inputdata into loadONNXmodel and then display the data in the composable
 @Composable
 fun ProgressByAI(context: Context) {
@@ -938,6 +978,9 @@ fun ProgressByAI(context: Context) {
     val approvedCount = remember { mutableStateOf(0) }
     val totalDays = remember { mutableStateOf(0) }
     val totalProgression = remember { mutableStateOf(0) }
+    val predictedValue = remember { mutableStateOf<LongArray?>(null) }
+    val predictedString = remember { mutableStateOf<String>("") }
+    val adviceBasedOnPredication = remember { mutableStateOf<String>("") }
 
     val uid = getUidFromSharedPreferences(context)
 
@@ -956,7 +999,8 @@ fun ProgressByAI(context: Context) {
 
                         // Extract number of active activities
                         val activityList = userData?.get("Activity") as? List<Map<String, Any>>
-                        val approved = activityList?.filter { it["status"] == "Approved" } ?: emptyList()
+                        val approved =
+                            activityList?.filter { it["status"] == "Approved" } ?: emptyList()
                         val approvedCodes = approved.mapNotNull { it["code"] as? String }
 
                         // Calculate total days for all active activities
@@ -984,7 +1028,8 @@ fun ProgressByAI(context: Context) {
                         }
 
                         // Progression
-                        val progression = userData?.get("progression") as? Map<String, Any> ?: emptyMap()
+                        val progression =
+                            userData?.get("progression") as? Map<String, Any> ?: emptyMap()
                         val totalProgressionValue = approvedCodes.sumOf { code ->
                             (progression[code] as? Number)?.toInt() ?: 0
                         } / 100
@@ -993,6 +1038,31 @@ fun ProgressByAI(context: Context) {
                         approvedCount.value = approvedCodes.size
                         totalDays.value = totalDuration
                         totalProgression.value = totalProgressionValue
+
+                        val inputData = floatArrayOf(
+                            (userAge.value ?: 0).toFloat(),
+                            approvedCount.value.toFloat(),
+                            totalDays.value.toFloat(),
+                            totalProgression.value.toFloat()
+                        )
+
+                        predictedValue.value = loadONNXModel(context, inputData) ?: LongArray(1)
+
+                        val prediction = predictedValue.value?.firstOrNull()
+                        predictedString.value = when (prediction) {
+                            0L -> "Slow"
+                            1L -> "Moderate"
+                            2L -> "Fast"
+                            else -> "No activities are active"
+                        }
+
+                        adviceBasedOnPredication.value = when (prediction) {
+                            0L -> "Keep going! Progress might feel slow right now, but every small step you take is moving you closer to your goal."
+                            1L -> "It’s also important to maintain consistency. Regular progress will help you achieve your goals faster."
+                            2L -> "While fast progress is great, make sure to balance your intensity to avoid burnout. It's important to allow your body time to recover."
+                            else -> "You've completed all your exercises! Well done and we hope InHouse Rehab has guided you well through your rehab!"
+                        }
+
                     } else {
                         Log.e("ProgressByAI", "No user found with this UID")
                     }
@@ -1004,37 +1074,98 @@ fun ProgressByAI(context: Context) {
     }
 
     Column {
-        Text(text = "User Age: ${userAge.value ?: "Loading..."}")
-        Text(text = "Approved Activity Codes: ${approvedActivities.value.joinToString(", ")}")
-        Text(text = "Total Approved Activities: ${approvedCount.value}")
-        Text(text = "Total Activity Duration: ${totalDays.value} days")
-        Text(text = "Total Exercise Adherence: ${totalProgression.value}%")
+        Text(
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            text = "Your Progress"
+        )
+
+        Text(
+            color = Color.White,
+            fontSize = 32.sp,
+            text = predictedString.value,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Text(
+            color = Color.White,
+            modifier = Modifier.padding(top = 4.dp),
+            text = adviceBasedOnPredication.value
+        )
     }
 }
 
-//fun loadONNXModel(context: Context, inputData: FloatArray): FloatArray? {
-//    return try {
-//        val ortEnv = OrtEnvironment.getEnvironment()
-//        val session = ortEnv.createSession(context.assets.open("model.onnx").readBytes())
-//
-//        val inputName = session.inputNames.first()
-//        val shape = longArrayOf(1, inputData.size.toLong())
-//
-//        // Convert FloatArray to FloatBuffer
-//        val floatBuffer = FloatBuffer.allocate(inputData.size)
-//        floatBuffer.put(inputData)
-//        floatBuffer.rewind()
-//
-//        val inputTensor = OnnxTensor.createTensor(ortEnv, floatBuffer, shape)
-//        val outputs = session.run(mapOf(inputName to inputTensor))
-//
-//        val outputArray = (outputs[0].value as Array<FloatArray>)[0]
-//        outputs.close()
-//        session.close()
-//
-//        outputArray
-//    } catch (e: Exception) {
-//        Log.e("ONNX", "Model loading failed: ${e.localizedMessage}")
-//        null
-//    }
-//}
+fun loadONNXModel(context: Context, inputData: FloatArray): LongArray? {
+    try {
+        val ortEnv = OrtEnvironment.getEnvironment()
+        val session = ortEnv.createSession(context.assets.open("model.onnx").readBytes())
+
+        val inputName = session.inputNames.first()
+        val shape = longArrayOf(1, inputData.size.toLong())
+
+        // Convert FloatArray to FloatBuffer
+        val floatBuffer = FloatBuffer.allocate(inputData.size)
+        floatBuffer.put(inputData)
+        floatBuffer.rewind()
+
+        val inputTensor = OnnxTensor.createTensor(ortEnv, floatBuffer, shape)
+        val outputs = session.run(mapOf(inputName to inputTensor))
+
+        // Debugging - Check output names
+        val outputNames = session.outputNames
+        Log.d("ONNX", "Model output names: $outputNames")
+
+        val outputName = session.outputNames.firstOrNull()
+        if (outputName == null) {
+            Log.e("ONNX", "No output name found in the model.")
+            return null
+        }
+
+        val outputOnnxValue = outputs[outputName]
+        if (outputOnnxValue == null) {
+            Log.e("ONNX", "No output found for key: $outputName")
+            return null
+        }
+
+        // Check if the output is an Optional and extract the value
+        if (outputOnnxValue is Optional<*>) {
+            // Log the content of the Optional
+            Log.d("ONNX", "Output Optional contains: ${outputOnnxValue.orElse(null)}")
+
+            // Extract OnnxTensor from the Optional
+            val tensor = outputOnnxValue.orElse(null) as? OnnxTensor
+            if (tensor == null) {
+                Log.e("ONNX", "Output is not an OnnxTensor, it's null inside Optional.")
+                return null
+            }
+
+            // Log the tensor information for debugging
+            Log.d("ONNX", "Tensor Info: ${tensor.info}")
+
+            // Handle extraction for INT64 tensor
+            try {
+                val longBuffer = tensor.longBuffer
+                val result = LongArray(longBuffer.remaining())
+                var i = 0
+                while (longBuffer.hasRemaining()) {
+                    result[i++] = longBuffer.get()
+                }
+                Log.d("ONNX", "Returned INT64 tensor as LongArray")
+                return result
+            } catch (e: Exception) {
+                Log.e("ONNX", "Error extracting INT64 data: ${e.localizedMessage}")
+            }
+        } else {
+            Log.e(
+                "ONNX",
+                "Expected Optional<OnnxTensor>, but found: ${outputOnnxValue::class.java}"
+            )
+            return null
+        }
+    } catch (e: Exception) {
+        Log.e("ONNX", "Model loading failed: ${e.localizedMessage}")
+        return null
+    }
+    return null
+}
