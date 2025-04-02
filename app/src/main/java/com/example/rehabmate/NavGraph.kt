@@ -79,6 +79,14 @@ fun NavGraph(
             ExerciseDemoTab(navController)
         }
 
+        //progress tracking
+        composable(
+            route = "progress_tracking_screen/{userId}"
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            ProgressTrackingScreen(navController, userId)
+        }
+
 
     }
 }

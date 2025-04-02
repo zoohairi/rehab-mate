@@ -245,7 +245,11 @@ fun HomeTab(navController: NavHostController) {
 
                         FeatureCard(
                             title = "Progress Tracking",
-                            onClick = { /* Navigate to progress tracking */ })
+                            onClick = {
+                                uid?.let { safeUid ->
+                                navController.navigate("progress_tracking_screen/$safeUid")
+                            }
+                        })
 
                         FeatureCard(
                             title = "Medical Records",
