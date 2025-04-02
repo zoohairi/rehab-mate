@@ -67,16 +67,19 @@ fun NavGraph(
         // ========== Dashboard tabs ==========
         //to display exercise details
         composable("home_tab") { HomeTab(navController) }
-        composable("exercise_info_tab/{status}") { backStackEntry ->
+        composable("exercise_info_tab/{status}/{exerciseCode}") { backStackEntry ->
             val exerciseStatus = backStackEntry.arguments?.getString("status")
-            ExerciseListTab(navController, exerciseStatus)
+            val exerciseCode = backStackEntry.arguments?.getString("exerciseCode")
+            ExerciseListTab(navController, exerciseStatus, exerciseCode)
         }
 
         //to exercise page
         composable("home_tab") { HomeTab(navController) }
-        composable("exercise_demo_tab") { backStackEntry ->
-//            val exerciseId = backStackEntry.arguments?.getString("exerciseId")
-            ExerciseDemoTab(navController)
+        composable("exercise_demo_tab/{exercise_description}/{exercise_duration}/{exercise_title}") { backStackEntry ->
+            val exercisedesc = backStackEntry.arguments?.getString("exercise_description")
+            val exerciseDuration = backStackEntry.arguments?.getString("exercise_duration")
+            val exerciseTitle = backStackEntry.arguments?.getString("exercise_title")
+            ExerciseDemoTab(navController, exercisedesc, exerciseDuration, exerciseTitle)
         }
 
         //progress tracking

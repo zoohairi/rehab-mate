@@ -1,72 +1,94 @@
+package com.example.rehabmate
+
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import android.content.Context
 import android.os.Looper
 import android.os.Handler
+import androidx.compose.ui.platform.LocalContext
 
-@Composable
-fun SpeechTestScreen(context: Context) {
-    var text by remember { mutableStateOf(TextFieldValue()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var resultMessage by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Enter text") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Button(
-            onClick = {
-                if (text.text.isNotEmpty()) {
-                    isLoading = true
-                    generateSpeech(context, text.text, "coral", "YOUR_API_KEY") { msg, _ ->
-                        isLoading = false
-                        resultMessage = msg
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
-        ) {
-            Text("Generate Speech")
-        }
-
-        if (isLoading) CircularProgressIndicator()
-        if (resultMessage.isNotEmpty()) Text(resultMessage)
-    }
-}
+//@Composable
+//fun SpeechTestScreen(exercise_des: String?) {
+//    val context = LocalContext.current // Get the current context
+//    var voiceOverEnabled by remember { mutableStateOf(false) }
+//
+//    var text by remember { mutableStateOf(TextFieldValue()) }
+//    var isLoading by remember { mutableStateOf(false) }
+//    var resultMessage by remember { mutableStateOf("") }
+//    val context = LocalContext.current
+//
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(16.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally
+//    ) {
+//        TextField(
+//            value = text,
+//            onValueChange = { text = it },
+//            label = { Text("Enter text") },
+//            modifier = Modifier.fillMaxWidth()
+//        )
+//
+//        // Auto-fill text field with exercise description
+//        LaunchedEffect(text.text) {
+//            if (text.text.isNotEmpty() && voiceOverEnabled) {
+//                isLoading = true
+//                generateSpeech(
+//                    context = context,
+//                    text = text.text,
+//                    callback = { msg, mediaPlayer ->  // Correcting the callback signature
+//                        isLoading = false
+//                        resultMessage = msg
+//                        // You can use mediaPlayer if needed for further playback control
+//                    }
+//                )
+//            }
+//        }
+//
+//
+//        Button(
+//            onClick = {
+//                if (text.text.isNotEmpty()) {
+//                    isLoading = true
+//                    generateSpeech(context, text.text, "en") { msg, _ ->
+//                        isLoading = false
+//                        resultMessage = msg
+//                    }
+//                }
+//            },
+//            modifier = Modifier.fillMaxWidth(),
+//            enabled = !isLoading
+//        ) {
+//            Text("Generate Speech")
+//        }
+//
+//        if (isLoading) CircularProgressIndicator()
+//        if (resultMessage.isNotEmpty()) Text(resultMessage)
+//    }
+//}
+//
 
 // Updated function to return the MediaPlayer
-private fun generateSpeech(
+public fun generateSpeech(
     context: Context,
     text: String,
-    voice: String,
-    apiKey: String,
     callback: (String, MediaPlayer?) -> Unit
 ) {
+
+    val apiKey = context.getString(R.string.TTS_API)
+    val voice = "coral"
     val url = "https://api.voicerss.org/?key=$apiKey&hl=en-us&src=$text&v=$voice&c=MP3"
     val client = OkHttpClient()
 
