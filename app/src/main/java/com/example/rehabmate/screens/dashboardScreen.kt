@@ -821,7 +821,6 @@ fun ExerciseListTab(navController: NavHostController) {
     }
 }
 
-
 @Composable
 fun ExerciseItem(exercise: Map<String, Any>) {
     // Safely extract values from the exercise map
@@ -958,7 +957,7 @@ fun ProgressByAI(context: Context) {
                         // Extract number of active activities
                         val activityList = userData?.get("Activity") as? List<Map<String, Any>>
                         val approved =
-                            activityList?.filter { it["status"] == "Approved" } ?: emptyList()
+                            activityList?.filter { it["status"] == "approved" || it["status"] == "progress"} ?: emptyList()
                         val approvedCodes = approved.mapNotNull { it["code"] as? String }
 
                         // Calculate total days for all active activities
