@@ -4,17 +4,22 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +34,14 @@ import com.example.rehabmate.firebase.storeUidInSharedPreferences
 import com.example.rehabmate.ui.theme.blue_color
 import com.example.rehabmate.ui.theme.red_color
 
+// Define these colors at the top of the file if not defined in your theme
+val primaryColor = Color(0xFF4257B2)
+val backgroundColor = Color(0xFF121212)
+val surfaceColor = Color(0xFF1E1E1E)
+val textPrimaryColor = Color.White
+val textSecondaryColor = Color(0xFFB0B0B0)
+val accentColor = Color(0xFFFFA726)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController) {
@@ -41,157 +54,251 @@ fun LoginScreen(navController: NavHostController) {
     // Get context for SharedPreferences
     val context = LocalContext.current
 
-    Scaffold { paddingValues ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(backgroundColor, Color(0xFF1A1A2E))
+                )
+            )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
+                .padding(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Back Button
-            Text(
-                text = "<",
-                fontSize = 24.sp,
+            // Back Navigation
+            Row(
                 modifier = Modifier
-                    .padding(16.dp)
-                    .clickable { navController.popBackStack() })
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 32.dp)
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(surfaceColor.copy(alpha = 0.5f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = textPrimaryColor
+                    )
+                }
+            }
 
+            // Main content
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Title
-                Text(
-                    text = "LOG IN ACCOUNT",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Input Section
-                Column(
+                // App Logo
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF334460), RoundedCornerShape(12.dp))
-                        .padding(16.dp)
-                ) {
-                    // Email Field
-                    TextField(
-                        value = email,
-                        onValueChange = { email = it; errorMessage = "" },
-                        placeholder = { Text("example@example.com") },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("emailTextField"),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Password Field
-                    TextField(
-                        value = password,
-                        onValueChange = { password = it; errorMessage = "" },
-                        placeholder = { Text("********") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("passwordTextField"),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                }
-
-                // Forgot Password Link
-                Text(
-                    text = "Forgot Password?",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 8.dp, end = 16.dp)
-                        .clickable { navController.navigate("forgot_password_screen") })
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Error Message
-                if (errorMessage.isNotEmpty()) {
-                    Text(
-                        text = errorMessage, color = red_color, modifier = Modifier.padding(8.dp)
-                    )
-                }
-
-                // Login Button
-                Button(
-                    onClick = {
-                        if (email.trim().isEmpty() || password.trim().isEmpty()) {
-                            errorMessage = "Please fill in both fields"
-                        } else {
-                            isLoading = true
-                            loginUser(email.trim(), password.trim(), onSuccess = { uid ->
-                                storeUidInSharedPreferences(uid, context)
-                                Log.d("LoginScreen", "Login successful")
-                                navController.navigate("dashboard_screen") //change screen name from welcome to dashboard
-                            }, onFailure = { error ->
-                                isLoading = false
-                                errorMessage = error
-                                Log.e("LoginScreen", error)
-                            })
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(50.dp)
-                        .testTag("loginButton"),
-                    enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(Color(0xFFE53935)) // Red color
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(primaryColor),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isLoading) "Logging in..." else "LOG IN",
-                        fontSize = 16.sp,
+                        text = "RM",
+                        color = Color.White,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Sign Up Link
+                // Title
                 Text(
-                    text = "Don't have an account? Sign up here",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = blue_color, // Ensure blue_color is defined in your colors
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .clickable(
-                            onClick = {
-                                navController.navigate("register_screen") // Navigate to Sign Up screen
-                            },
-                            indication = rememberRipple(bounded = true), // Adds ripple effect when clicked
-                            interactionSource = remember { MutableInteractionSource() } // Ensures correct interaction behavior
-                        )
+                    text = "Welcome Back",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        color = textPrimaryColor,
+                        fontWeight = FontWeight.Bold
+                    )
                 )
 
+                Text(
+                    text = "Log in to your RehabMate account",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = textSecondaryColor
+                    ),
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                // Input Form
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = surfaceColor
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 8.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        // Email Field
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it; errorMessage = "" },
+                            placeholder = { Text("Email Address", color = textSecondaryColor) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = textSecondaryColor
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                                .testTag("emailTextField"),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = Color(0xFF2A2A2A),
+                                focusedContainerColor = Color(0xFF2A2A2A),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = primaryColor
+                            ),
+                            singleLine = true
+                        )
+
+                        // Password Field
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it; errorMessage = "" },
+                            placeholder = { Text("Password", color = textSecondaryColor) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = textSecondaryColor
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("passwordTextField"),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = Color(0xFF2A2A2A),
+                                focusedContainerColor = Color(0xFF2A2A2A),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = primaryColor
+                            ),
+                            singleLine = true
+                        )
+
+                        // Forgot Password Link
+                        Text(
+                            text = "Forgot Password?",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = accentColor,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .clickable { navController.navigate("forgot_password_screen") }
+                                .padding(top = 8.dp, bottom = 24.dp)
+                        )
+
+                        // Error Message
+                        if (errorMessage.isNotEmpty()) {
+                            Text(
+                                text = errorMessage,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = red_color
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                            )
+                        }
+
+                        // Login Button
+                        Button(
+                            onClick = {
+                                if (email.trim().isEmpty() || password.trim().isEmpty()) {
+                                    errorMessage = "Please fill in both fields"
+                                } else {
+                                    isLoading = true
+                                    loginUser(email.trim(), password.trim(), onSuccess = { uid ->
+                                        storeUidInSharedPreferences(uid, context)
+                                        Log.d("LoginScreen", "Login successful")
+                                        navController.navigate("dashboard_screen")
+                                    }, onFailure = { error ->
+                                        isLoading = false
+                                        errorMessage = error
+                                        Log.e("LoginScreen", error)
+                                    })
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("loginButton"),
+                            enabled = !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = primaryColor,
+                                disabledContainerColor = primaryColor.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(25.dp)
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "LOG IN",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Sign Up Link
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Don't have an account? ",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = textSecondaryColor
+                        )
+                    )
+
+                    Text(
+                        text = "Sign Up",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = blue_color,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .clickable { navController.navigate("register_screen") }
+                            .padding(horizontal = 4.dp)
+                    )
+                }
             }
         }
     }
