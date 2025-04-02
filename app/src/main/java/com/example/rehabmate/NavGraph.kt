@@ -37,6 +37,7 @@ fun NavGraph(
         composable("appointment_screen") { AppointmentScreen(navController) }
         composable("profile_screen") { ProfileScreen(navController) }
         composable("editProfile_screen") { editprofileScreen(navController) }
+        composable("referral_screen") { ReferralScreen(navController) }
 
         // Exercise Screens
         composable("dashboard_screen") { DashboardScreen(navController) }

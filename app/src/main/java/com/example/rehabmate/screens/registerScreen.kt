@@ -68,13 +68,6 @@ fun RegisterScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Register Text
-                Text(
-                    text = "Register",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Input Section

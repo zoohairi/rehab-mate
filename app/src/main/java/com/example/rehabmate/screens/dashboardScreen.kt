@@ -212,7 +212,9 @@ fun HomeTab(navController: NavHostController) {
                                     contentDescription = "Add referral Code",
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .clickable { /* Handle add referral code click */ }
+                                        .clickable {
+                                            navController.navigate("referral_screen")
+                                        }
                                 )
 
                                 // Sign Out

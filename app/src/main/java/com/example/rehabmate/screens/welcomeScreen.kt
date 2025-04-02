@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,8 +45,17 @@ fun WelcomeScreen(navController: NavHostController) {
                         letterSpacing = 2.sp
                     ), textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(
+                    text = "Your Partner in Recovery, Every Step of the Way!", style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic,
+                        letterSpacing = 2.sp
+                    ), textAlign = TextAlign.Center
+                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 Button(
@@ -55,7 +65,7 @@ fun WelcomeScreen(navController: NavHostController) {
                         // Navigate to Login screen
                         navController.navigate("login_screen")
                     }) {
-                    Text(text = "Login In".uppercase(), modifier = Modifier.padding(10.dp))
+                    Text(text = "Login".uppercase(), modifier = Modifier.padding(10.dp))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
