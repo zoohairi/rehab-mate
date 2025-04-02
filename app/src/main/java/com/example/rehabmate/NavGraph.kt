@@ -9,7 +9,6 @@ import com.example.rehabmate.screens.*
 import com.example.rehabmate.screens.demoPurposes.ExerciseApiScreen
 import com.example.rehabmate.screens.demoPurposes.ExerciseDemoScreen
 import com.example.rehabmate.screens.demoPurposes.SpeechScreen
-import com.example.rehabmate.screens.WelcomeScreen
 
 @Composable
 fun NavGraph(
@@ -18,79 +17,57 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "welcome_screen",
+        startDestination = "splash_screen",
         modifier = modifier
     ) {
-        // Authentication Screens
+        // Splash & Auth Screens
+        composable("splash_screen") { splash_screen(navController) }
         composable("welcome_screen") { WelcomeScreen(navController) }
         composable("login_screen") { LoginScreen(navController) }
         composable("register_screen") { RegisterScreen(navController) }
-        composable("personalised_screen/{username}") { backStackEntry ->
-            val username = backStackEntry.arguments?.getString("username")
-            PersonalisedScreen(navController, username)
-        }
-        composable("forgot_password_screen") {
-            ForgotPasswordScreen(navController)
-        }
+        composable("forgot_password_screen") { ForgotPasswordScreen(navController) }
 
-        // Main App Screens
+        // Dashboard & Tabs
+        composable("dashboard_screen") { DashboardScreen(navController) }
         composable("appointment_screen") { AppointmentScreen(navController) }
         composable("profile_screen") { ProfileScreen(navController) }
         composable("editProfile_screen") { editprofileScreen(navController) }
         composable("referral_screen") { ReferralScreen(navController) }
 
-        // Exercise Screens
-        composable("dashboard_screen") { DashboardScreen(navController) }
+        // Exercise Pages
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
 
-        // Speech Screen - Using the proper Composable function
+        composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
+            ExerciseDemoScreen(navController)
+        }
+
         composable("speechScreen/{instructions}") { backStackEntry ->
             val instructions = backStackEntry.arguments?.getString("instructions") ?: ""
             SpeechScreen(navController, instructions)
         }
 
-        composable("exercise_screen_api") {
-            ExerciseApiScreen(navController)
+        // Tabs
+        composable("tab_home") { HomeTab(navController) }
+        composable("tab_exercise_info/{status}/{exerciseCode}") { backStackEntry ->
+            val status = backStackEntry.arguments?.getString("status")
+            val code = backStackEntry.arguments?.getString("exerciseCode")
+            ExerciseListTab(navController, status, code)
+        }
+        composable("tab_exercise_demo/{desc}/{duration}/{title}") { backStackEntry ->
+            val desc = backStackEntry.arguments?.getString("desc")
+            val duration = backStackEntry.arguments?.getString("duration")
+            val title = backStackEntry.arguments?.getString("title")
+            ExerciseDemoTab(navController, desc, duration, title)
         }
 
-        // Exercise Details Screens
-        composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
-            val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"
-            ExerciseDemoScreen(navController)
-        }
-
+        // API & Progress
+        composable("exercise_screen_api") { ExerciseApiScreen(navController) }
         composable("about_app_screen") { AboutAppScreen(navController) }
-        composable("medical_records_screen") {
-            medicalHistoryScreen(navController)
-        }
-
-        // ========== Dashboard tabs ==========
-        //to display exercise details
-        composable("home_tab") { HomeTab(navController) }
-        composable("exercise_info_tab/{status}/{exerciseCode}") { backStackEntry ->
-            val exerciseStatus = backStackEntry.arguments?.getString("status")
-            val exerciseCode = backStackEntry.arguments?.getString("exerciseCode")
-            ExerciseListTab(navController, exerciseStatus, exerciseCode)
-        }
-
-        //to exercise page
-        composable("home_tab") { HomeTab(navController) }
-        composable("exercise_demo_tab/{exercise_description}/{exercise_duration}/{exercise_title}") { backStackEntry ->
-            val exercisedesc = backStackEntry.arguments?.getString("exercise_description")
-            val exerciseDuration = backStackEntry.arguments?.getString("exercise_duration")
-            val exerciseTitle = backStackEntry.arguments?.getString("exercise_title")
-            ExerciseDemoTab(navController, exercisedesc, exerciseDuration, exerciseTitle)
-        }
-
-        //progress tracking
-        composable(
-            route = "progress_tracking_screen/{userId}"
-        ) { backStackEntry ->
+        composable("medical_records_screen") { medicalHistoryScreen(navController) }
+        composable("progress_tracking_screen/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
             ProgressTrackingScreen(navController, userId)
         }
-
-
     }
 }

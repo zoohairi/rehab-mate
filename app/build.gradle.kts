@@ -72,6 +72,12 @@ dependencies {
     // OkHttp dependency
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
+    //Google Map
+    implementation("org.osmdroid:osmdroid-android:6.1.10")
+    implementation("org.osmdroid:osmdroid-wms:6.1.10")
+    implementation("com.google.maps.android:maps-compose:2.3.0")
+    implementation("com.google.android.gms:play-services-maps:17.0.1")
+
 
     // Gson & Moshi JSON Parsers
     implementation("com.google.code.gson:gson:2.8.9")
@@ -85,6 +91,9 @@ dependencies {
 
     implementation("androidx.appcompat:appcompat:1.6.1")  // time of writing
     implementation("androidx.constraintlayout:constraintlayout:2.1.4") //  constraint layout
+
+
+    implementation("com.google.android.libraries.places:places:3.3.0")
 
     // Machine learning
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.21.0")
