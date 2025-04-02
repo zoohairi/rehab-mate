@@ -65,19 +65,6 @@ fun ForgotPasswordScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Header Text
-                Text(
-                    text = "Forget Password?",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean sed arcu eget quam sagittis vehicula in eu orci.",
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Input Section
