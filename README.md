@@ -1,7 +1,7 @@
 # 🤖 RehabMate - Smart Rehabilitation Assistant
 
-Note: Please use `API` branch.
-RehabMate is a mobile healthcare application designed to **support individuals recovering from injuries or surgeries** using **smartwatch technology and motion tracking**. By leveraging motion sensors and AI-driven feedback, RehabMate ensures users perform rehabilitation exercises correctly, reducing the risk of re-injury and optimizing recovery progress.
+RehabMate is a mobile healthcare application designed to **support individuals recovering from injuries or surgeries** using **smartwatch technology and motion tracking**. By leveraging motion sensors and AI-driven feedback, RehabMate ensures users perform rehabilitation exercises correctly, reducing the risk of re-injury and optimizing recovery progress. <br>
+Note: Please use and time-track submission on `API` branch.
 
 ---
 
