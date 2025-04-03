@@ -37,7 +37,8 @@ fun RehabMateTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = typography,
         content = content
+
     )
 }

@@ -452,6 +452,7 @@ fun HomeTab(navController: NavHostController) {
                                         Log.d("ExerciseList", exercises.toString())
                                         exerciseList.value = exercises
                                         isLoading.value = false
+                                        isLoading.value = false
                                     }, onFailure = { error ->
                                         errorMessage.value = error
                                         isLoading.value = false
