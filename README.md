@@ -52,12 +52,13 @@ RehabMate is a mobile healthcare application designed to **support individuals r
 ---
 
 ## 📌 Getting Started
-1. **Download & Install**
-2. **Run the mobile application**
-3. **Connects phone with the smartwatch** - for sensors and motion tracking
+1. **Use `API` branch**
+2. **Download & Install**
+3. **Run the mobile application**
+4. **Connects phone with the smartwatch** - for sensors and motion tracking
    - For Emulator - Pair the phone with the watch emulator
-4. **Navigate to /wear and run wear application**
-5. **Sign Up & Connect** – Register and sync with a smartwatch.
-6. **Start Your Journey** – Track, improve, and recover efficiently!
+5. **Navigate to /wear and run wear application**
+6. **Sign Up & Connect** – Register and sync with a smartwatch.
+7. **Start Your Journey** – Track, improve, and recover efficiently!
 
 Join us in making rehabilitation **smarter, safer, and more effective** with RehabMate! 💪
