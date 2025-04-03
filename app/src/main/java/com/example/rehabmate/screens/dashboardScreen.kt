@@ -55,6 +55,14 @@ import kotlinx.coroutines.delay
 import java.nio.FloatBuffer
 import java.util.Optional
 
+//Watch Items
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Wearable
+import androidx.compose.runtime.DisposableEffect
+
+import org.json.JSONObject
+
 @Composable
 fun HomeTab(navController: NavHostController) {
     val context = LocalContext.current
@@ -355,18 +363,19 @@ fun ExerciseDemoTab(
     }
 
     DisposableEffect(Unit) {
+        Log.d("Hello", "DisposableEffect called")
         val listener = object : MessageClient.OnMessageReceivedListener {
             override fun onMessageReceived(messageEvent: MessageEvent) {
-                Log.d(
-                    "ExerciseDemoTab",
-                    "Received message: ${messageEvent.path} -> ${String(messageEvent.data)}"
-                )
+                Log.d("DashboardScreen", "Received message: ${messageEvent.path} -> ${String(messageEvent.data)}")
             }
         }
         Wearable.getMessageClient(context).addListener(listener)
-        onDispose { Wearable.getMessageClient(context).removeListener(listener) }
+        onDispose {
+            Wearable.getMessageClient(context).removeListener(listener)
+        }
     }
 
+    // Function to handle speech generation with consistent behavior
     fun startSpeechAndTimer() {
         if (text.text.isNotEmpty()) {
             isLoading = true
