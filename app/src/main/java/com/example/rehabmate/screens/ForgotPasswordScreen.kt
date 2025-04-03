@@ -156,7 +156,7 @@ fun ForgotPasswordScreen(navController: NavHostController) {
                                     isLoading = false
                                     if (task.isSuccessful) {
                                         Log.d("ForgotPasswordScreen", "Password reset email sent")
-                                        navController.navigate("login")
+                                        navController.navigate("login_screen")
                                     } else {
                                         errorMessage = "Error: ${'$'}{task.exception?.message}"
                                         Log.e(

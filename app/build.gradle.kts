@@ -64,6 +64,16 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-storage-ktx:20.0.1")
     implementation("io.coil-kt:coil-compose:2.1.0")
+    implementation("com.google.firebase:firebase-messaging:23.1.2") // latest stable
+
+
+    implementation("com.google.android.libraries.places:places:3.3.0")
+
+    //Google Map
+    implementation("org.osmdroid:osmdroid-android:6.1.10")
+    implementation("org.osmdroid:osmdroid-wms:6.1.10")
+    implementation("com.google.maps.android:maps-compose:2.3.0")
+    implementation("com.google.android.gms:play-services-maps:17.0.1")
 
     // Google Play Services
     implementation("com.google.android.gms:play-services-auth:20.7.0")
@@ -88,6 +98,9 @@ dependencies {
 
     // Machine learning
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.21.0")
+
+    //wearable
+    implementation(libs.play.services.wearable)
 
     // Testing libraries
     testImplementation(libs.junit)
