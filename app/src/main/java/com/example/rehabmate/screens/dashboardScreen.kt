@@ -76,15 +76,8 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
-import org.json.JSONObject
 import java.nio.FloatBuffer
 import java.util.Optional
-
-import com.google.android.gms.wearable.MessageClient
-import com.google.android.gms.wearable.MessageEvent
-import com.google.android.gms.wearable.Wearable
-import androidx.compose.runtime.DisposableEffect
-
 
 @Composable
 fun DashboardScreen(navController: NavHostController) {
@@ -840,30 +833,8 @@ fun HomeTab(navController: NavHostController) {
                             }
                         }
 
-                        fun sendStartRecordingMessage(durationSeconds: Int, title: String) {
-                            val json = JSONObject().apply {
-                                put("duration", durationSeconds)
-                                put("title", title)
-                            }
-                            val payload = json.toString().toByteArray()
-                            Wearable.getNodeClient(context).connectedNodes.addOnSuccessListener { nodes ->
-                                nodes.forEach { node ->
-                                    Wearable.getMessageClient(context)
-                                        .sendMessage(node.id, "/start-recording", payload)
-                                        .addOnSuccessListener {
-                                            Log.d("MobileApp", "Sent /start-recording message with duration $durationSeconds and title '$title' to node: ${node.id}")
-                                        }
-                                        .addOnFailureListener { e ->
-                                            Log.e("MobileApp", "Failed to send /start-recording message", e)
-                                        }
-                                }
-                            }
-
-                        }
-
                         // Function to handle speech generation with consistent behavior
                         fun startSpeechAndTimer() {
-
                             if (text.text.isNotEmpty()) {
                                 isLoading = true
                                 generateSpeech(
@@ -872,7 +843,7 @@ fun HomeTab(navController: NavHostController) {
                                     callback = { msg, mediaPlayer ->
                                         isLoading = false
                                         resultMessage = msg
-                                        // Start the timer when the audio finishes playing.
+                                        // Start the timer when the audio finishes playing
                                         mediaPlayer?.setOnCompletionListener {
                                             currentTime = exerciseDurationInSeconds ?: 30
                                             isPlaying = true  // Start the timer countdown
@@ -881,7 +852,6 @@ fun HomeTab(navController: NavHostController) {
                                 )
                             }
                         }
-
 
                         // Effect for voice over - only trigger speech when voiceOverEnabled changes to true
                         LaunchedEffect(voiceOverEnabled) {
@@ -1898,22 +1868,8 @@ fun ExerciseDemoTab(
         }
     }
 
-    DisposableEffect(Unit) {
-        Log.d("Hello", "DisposableEffect called")
-        val listener = object : MessageClient.OnMessageReceivedListener {
-            override fun onMessageReceived(messageEvent: MessageEvent) {
-                Log.d("DashboardScreen", "Received message: ${messageEvent.path} -> ${String(messageEvent.data)}")
-            }
-        }
-        Wearable.getMessageClient(context).addListener(listener)
-        onDispose {
-            Wearable.getMessageClient(context).removeListener(listener)
-        }
-    }
-
     // Function to handle speech generation with consistent behavior
     fun startSpeechAndTimer() {
-
         if (text.text.isNotEmpty()) {
             isLoading = true
             generateSpeech(
