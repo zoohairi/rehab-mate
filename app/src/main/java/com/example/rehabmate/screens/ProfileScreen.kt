@@ -2,76 +2,59 @@ package com.example.rehabmate.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.rehabmate.firebase.fetchUserInfo
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
     val auth = FirebaseAuth.getInstance()
-    val uid = auth.currentUser?.uid
+    val currentUser = auth.currentUser
 
-    var name by remember { mutableStateOf("Loading...") }
-    var email by remember { mutableStateOf("Loading...") }
-    var phone by remember { mutableStateOf("-") }
-    var birthDate by remember { mutableStateOf("-") }
-    var completedActivities by remember { mutableStateOf(0) }
-    var inProgressActivities by remember { mutableStateOf(0) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(uid) {
-        uid?.let {
-            fetchUserInfo(it).onSuccess { data ->
-                name = data["name"] as? String ?: "No Name"
-                email = data["email"] as? String ?: "No Email"
-                val profile = data["profile"] as? Map<String, Any> ?: emptyMap()
-                phone = profile["phone_number"]?.toString() ?: "-"
-                birthDate = profile["date"] as? String ?: "-"
-
-                val activities = data["Activity"] as? List<Map<String, Any>> ?: emptyList()
-                completedActivities = activities.count { it["status"] == "closed" }
-                inProgressActivities = activities.count { it["status"] == "Progress" }
-
-            }.onFailure {
-                error = it.message ?: "Unknown error"
-            }
-        } ?: run {
-            error = "User not logged in"
-        }
-    }
+    val userName = currentUser?.displayName ?: "JOHN LIM"
+    val userEmail = currentUser?.email ?: "johnlim@gmail.com"
+    val userPhone = "0412 111 222" // This would come from Firestore in a real app
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .verticalScroll(rememberScrollState()) // Enables scrolling
     ) {
-
-        // Header
+        // Profile Header with background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF2196F3))
                 .padding(16.dp)
         ) {
+            // Back button
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
@@ -79,109 +62,117 @@ fun ProfileScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp)
-            )
+                    .size(24.dp))
 
+            // Header title
             Text(
                 text = "MY PROFILE",
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 4.dp)
             )
-        }
 
-        // Profile Section
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp)
-        ) {
-            // Initials Avatar
-            Box(
+            // Profile content
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
+                    .fillMaxWidth()
+                    .padding(top = 32.dp)
             ) {
+                // Profile picture
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Profile image placeholder
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile Picture",
+                        tint = Color.Red,
+                        modifier = Modifier.size(60.dp)
+                    )
+                    Text(
+                        text = "Profile\nPicture",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // User name
                 Text(
-                    text = name.split(" ").filter { it.isNotEmpty() }
-                        .map { it.first() }.joinToString("").take(2).uppercase(),
-                    fontSize = 36.sp,
+                    text = userName,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red,
-                    modifier = Modifier.align(Alignment.Center)
+                    color = Color.White
+                )
+
+                // User email
+                Text(
+                    text = userEmail, fontSize = 14.sp, color = Color.White
+                )
+
+                // User phone
+                Text(
+                    text = userPhone, fontSize = 14.sp, color = Color.White
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Text(text = email, fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
-            Text(text = "Phone: $phone", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
-            Text(text = "DOB: $birthDate", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
         }
 
-        if (error != null) {
-            Text("Error: $error", color = Color.Red, modifier = Modifier.padding(16.dp))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Activity Status
+        // Stats row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ActivityStat(title = "Completed Exercises", value = completedActivities.toString())
-            ActivityStat(title = "Ongoing Exercises", value = inProgressActivities.toString())
+            StatItem(title = "Total Exercise", value = "157")
+            StatItem(title = "Years Old", value = "27")
+            StatItem(title = "XXXX", value = "XX")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Menu options
+        MenuOption(
+            icon = Icons.Default.Person,
+            title = "Edit Profile",
+            onClick = { navController.navigate("editProfile_screen") })
 
-        // Menu Options
-        EnhancedMenuOption(
-            Icons.Default.Person,
-            "Edit Profile"
-        ) { navController.navigate("editProfile_screen") }
-        EnhancedMenuOption(
-            Icons.Default.DateRange,
-            "View Appointment"
-        ) { navController.navigate("appointment_screen") }
-        EnhancedMenuOption(
-            Icons.Default.Info,
-            "Your Medical Records"
-        ) { navController.navigate("medical_records_screen") }
-        EnhancedMenuOption(
-            Icons.Default.Info,
-            "About App"
-        ) { navController.navigate("about_app_screen") }
-        EnhancedMenuOption(Icons.AutoMirrored.Filled.ExitToApp, "Logout", tint = Color.Red) {
-            auth.signOut()
-            navController.navigate("welcome_screen") {
-                popUpTo("welcome_screen") { inclusive = true }
-            }
-        }
-    }
-}
+        MenuOption(
+            icon = Icons.Default.Person,
+            title = "View Appointment",
+            onClick = { navController.navigate("appointment_screen") })
 
+        MenuOption(
+            icon = Icons.Default.Person,
+            title = "All Exercise History",
+            onClick = { /* Navigate to exercise history */ })
 
-@Composable
-fun ActivityStat(title: String, value: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .background(Color(0xFF1E88E5), shape = RoundedCornerShape(8.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(8.dp))
-    ) {
-        Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(text = title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+        MenuOption(
+            icon = Icons.Default.Person,
+            title = "Your Medical Records",
+            onClick = { navController.navigate("medical_records_screen") })
+
+        MenuOption(
+            icon = Icons.Default.Person,
+            title = "About App",
+            onClick = { navController.navigate("about_app_screen") })
+
+        // Logout option
+        MenuOption(
+            icon = Icons.Default.Person, title = "Logout", tint = Color.Red, onClick = {
+                auth.signOut()
+                navController.navigate("welcome_screen") {
+                    popUpTo("welcome_screen") { inclusive = true }
+                }
+            })
     }
 }
 
@@ -190,9 +181,8 @@ fun StatItem(title: String, value: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .background(Color(0xFFE53935), shape = RoundedCornerShape(8.dp))
+            .background(Color(0xFFE53935), shape = RoundedCornerShape(4.dp))
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(8.dp))
     ) {
         Text(
             text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
@@ -204,7 +194,7 @@ fun StatItem(title: String, value: String) {
 }
 
 @Composable
-fun EnhancedMenuOption(
+fun MenuOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     tint: Color = Color.White,
@@ -216,12 +206,8 @@ fun EnhancedMenuOption(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .background(
-                color = Color(0xFF1E1E1E), // Dark background
-                shape = RoundedCornerShape(12.dp) // Rounded corners
-            )
-            .padding(16.dp) // Inner padding for content
     ) {
+        // Icon in a circle
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -237,16 +223,17 @@ fun EnhancedMenuOption(
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp)) // Adding space between the icon and text
-
+        // Menu title
         Text(
             text = title,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
             color = tint,
-            modifier = Modifier.weight(1f) // Ensuring text takes the available space
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp)
         )
 
+        // Forward arrow
         Icon(
             imageVector = Icons.Default.ArrowForward,
             contentDescription = "Go to $title",
@@ -255,6 +242,5 @@ fun EnhancedMenuOption(
         )
     }
 
-    // Divider with a lighter color
-    Divider(color = Color(0xFF2A2A2A), thickness = 1.dp)
+    Divider(color = Color.DarkGray, thickness = 1.dp)
 }

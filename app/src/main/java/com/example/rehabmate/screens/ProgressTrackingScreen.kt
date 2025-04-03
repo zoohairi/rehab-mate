@@ -28,11 +28,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavHostController
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.runtime.getValue
 
 data class ProgressData(
     val exerciseId: String,
@@ -51,28 +46,23 @@ fun ColoredProgressBar(
     progress: Int,
     modifier: Modifier = Modifier
 ) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0, 100) / 100f,
-        label = ""
-    )
-
+    val fraction = progress.coerceIn(0, 100) / 100f
     val fillColor = when {
         progress < 35 -> Color(0xFF7C2638)
-        progress < 75 -> Color(0xFFFFC107)
-        else -> Color(0xFF418D43)
+        progress < 75 -> Color(0xFFFFC107) // Custom yellow example
+        else -> Color(0xFF418D43)         // Custom green example
     }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(20.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFF424242)) // Dark grey background
+            .background(Color(0xFF424242)) // Dark gray behind the bar
     ) {
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(animatedProgress)
+                .fillMaxWidth(fraction)
                 .background(fillColor)
         )
         Text(
@@ -225,35 +215,32 @@ fun ProgressTrackingScreen(navController: NavHostController, userId: String?) {
                 )
             } else {
                 progressDataList.value.forEach { progressData ->
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 10 }) // very subtle
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                        elevation = CardDefaults.cardElevation(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
                     ) {
-                        Card(
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                            elevation = CardDefaults.cardElevation(8.dp),
+                        Column(
                             modifier = Modifier
+                                .padding(16.dp)
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = progressData.exerciseTitle,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                ColoredProgressBar(
-                                    progress = progressData.progressionValue,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            // Exercise title at the top
+                            Text(
+                                text = progressData.exerciseTitle,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Colored progress bar at the bottom
+                            ColoredProgressBar(
+                                progress = progressData.progressionValue,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }

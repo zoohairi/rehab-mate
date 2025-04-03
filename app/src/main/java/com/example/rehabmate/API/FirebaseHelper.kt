@@ -1,11 +1,10 @@
 package com.example.rehabmate.firebase
 
-
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
-import com.example.rehabmate.AppointmentData
-import com.example.rehabmate.DoctorInfo
+import com.example.rehabmate.screens.AppointmentData
+import com.example.rehabmate.screens.DoctorInfo
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.SetOptions
@@ -222,7 +221,7 @@ fun updateUserProfile(
     email: String,
     address: String,
     date: String,
-    phoneNumber: String, // Change to String
+    phoneNumber: Int,
     onSuccess: () -> Unit,
     onFailure: (String) -> Unit
 ) {
@@ -234,7 +233,7 @@ fun updateUserProfile(
         "profile" to mapOf(
             "address" to address,
             "date" to date,
-            "phone_number" to phoneNumber,  // Ensure phone_number is a String
+            "phone_number" to phoneNumber,
         )
     )
 
@@ -269,13 +268,15 @@ fun fetchUserAppointmentsAndUpdateState(
         val rawAppointments = profile["appointment"] as? List<*> ?: emptyList<Any>()
 
         if (rawAppointments.isEmpty()) {
-            onUpdate(emptyList()) // No appointments found
+            onUpdate(emptyList()) // No appointments
             return@addOnSuccessListener
         }
+        //formating of time_stamp and ensure it is current time zone (Firebase stores in UTC+8)
+        val dateTimeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm a", Locale.getDefault())
+        dateTimeFormatter.timeZone = TimeZone.getTimeZone("UTC")
 
-        val localFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm a", Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault() // Convert to device timezone
-        }
+        val localFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm a", Locale.getDefault())
+        localFormatter.timeZone = TimeZone.getDefault() // Convert to local timezone
 
         val appointmentsList = mutableListOf<AppointmentData>()
         var completedAppointments = 0
@@ -285,34 +286,28 @@ fun fetchUserAppointmentsAndUpdateState(
             (appointment as? Map<*, *>)?.let { appointmentMap ->
                 val code = appointmentMap["code"] as? String ?: "Unknown Code"
                 val timestamp = appointmentMap["date_time"] as? Timestamp
-                val formattedDateTime =
-                    timestamp?.let { localFormatter.format(it.toDate()) } ?: "Unknown Date/Time"
+                val formattedDateTime = timestamp?.let {
+                    localFormatter.format(it.toDate())
+                } ?: "Unknown Date/Time"
 
-                val dateTimeParts = formattedDateTime.split(" ")
-                val date = dateTimeParts.getOrNull(0) ?: "Unknown Date"
+                val date = formattedDateTime.split(" ")[0] // Extract date part
                 val time =
-                    if (dateTimeParts.size >= 3) "${dateTimeParts[1]} ${dateTimeParts[2]}" else "Unknown Time"
+                    formattedDateTime.split(" ")[1] + " " + formattedDateTime.split(" ")[2] // Extract time part
 
-                // Fetch exercise details using the code
                 db.collection("Exercises").document(code).get()
                     .addOnSuccessListener { exerciseDoc ->
-                        Log.d("FirestoreDebug123", "Fetched Exercise Document: ${exerciseDoc.data}")
-
-                        // Fetch the doctor_incharge field
                         val doctorInCharge =
                             exerciseDoc.get("doctor_incharge") as? List<String> ?: emptyList()
 
                         if (doctorInCharge.isEmpty()) {
-                            // No doctors found, add the appointment immediately
+                            // Add a default "Unknown Doctor"
                             appointmentsList.add(
                                 AppointmentData(
                                     id = code,
                                     doctors = listOf(
                                         DoctorInfo(
                                             "Unknown Doctor",
-                                            "Unknown Specialty",
-                                            "Unknown Location", // Default to Unknown Location
-                                            null // No GeoPoint
+                                            "Unknown Specialty"
                                         )
                                     ),
                                     date = date,
@@ -321,137 +316,70 @@ fun fetchUserAppointmentsAndUpdateState(
                                 )
                             )
                             completedAppointments++
-                            if (completedAppointments == totalAppointments) onUpdate(
-                                appointmentsList
-                            )
+                            if (completedAppointments == totalAppointments) {
+                                onUpdate(appointmentsList)
+                            }
                         } else {
-                            // Fetch doctor details asynchronously
-                            val doctorDetailsList = mutableListOf<DoctorInfo>()
+                            val doctorDetails = mutableListOf<DoctorInfo>()
                             var completedDoctors = 0
 
-                            doctorInCharge.forEach { doctorId ->
-                                db.collection("Doctors").document(doctorId).get()
+                            doctorInCharge.forEach { doctorUid ->
+                                db.collection("Doctors").document(doctorUid).get()
                                     .addOnSuccessListener { doctorDoc ->
-                                        Log.d(
-                                            "FirestoreDebug123",
-                                            "Fetched Doctor Document: ${doctorDoc.data}"
-                                        )
+                                        if (doctorDoc.exists()) {
+                                            val doctorName =
+                                                doctorDoc.getString("name") ?: "Unknown Doctor"
+                                            val specialtyList = doctorDoc.get("specialty")
+                                            val specialty = when (specialtyList) {
+                                                is String -> specialtyList
+                                                is List<*> -> specialtyList.joinToString(", ")
+                                                else -> "Unknown Specialty"
+                                            }
 
-                                        val doctorName =
-                                            doctorDoc.getString("name") ?: "Unknown Name"
-                                        val doctorSpecialty =
-                                            doctorDoc.get("specialty") as? List<String>
-                                                ?: emptyList()
-
-                                        val geoPoint =
-                                            doctorDoc.get("geopoint") as? com.google.firebase.firestore.GeoPoint
-                                        val doctorLocation = if (geoPoint != null) {
-                                            // Convert Firebase GeoPoint to OSMDroid GeoPoint
-                                            val osmdroidGeoPoint = org.osmdroid.util.GeoPoint(
-                                                geoPoint.latitude,
-                                                geoPoint.longitude
-                                            )
-                                            "Lat: ${osmdroidGeoPoint.latitude}, Lng: ${osmdroidGeoPoint.longitude}"
-                                        } else {
-                                            "Unknown Location" // Fallback if 'geopoint' is not available or null
+                                            doctorDetails.add(DoctorInfo(doctorName, specialty))
                                         }
 
-                                        doctorDetailsList.add(
-                                            DoctorInfo(
-                                                doctorName,
-                                                doctorSpecialty.joinToString(", "),
-                                                doctorLocation,
-                                                if (geoPoint != null) org.osmdroid.util.GeoPoint(
-                                                    geoPoint.latitude,
-                                                    geoPoint.longitude
-                                                ) else null // Convert Firebase GeoPoint to OSMDroid GeoPoint
-                                            )
-                                        )
-
                                         completedDoctors++
-
                                         if (completedDoctors == doctorInCharge.size) {
-                                            // Add the appointment with the doctor details once all doctors are fetched
                                             appointmentsList.add(
                                                 AppointmentData(
                                                     id = code,
-                                                    doctors = doctorDetailsList,
+                                                    doctors = doctorDetails,  // List of doctors
                                                     date = date,
                                                     time = time,
-                                                    location = doctorDetailsList.joinToString(", ") { it.location }
+                                                    location = doctorDoc.getString("location")
+                                                        ?: "Unknown Location"
                                                 )
                                             )
                                             completedAppointments++
-                                            if (completedAppointments == totalAppointments) onUpdate(
-                                                appointmentsList
-                                            )
+                                            if (completedAppointments == totalAppointments) {
+                                                onUpdate(appointmentsList)
+                                            }
                                         }
-                                    }
-                                    .addOnFailureListener {
+                                    }.addOnFailureListener {
                                         completedDoctors++
                                         if (completedDoctors == doctorInCharge.size) {
                                             completedAppointments++
-                                            if (completedAppointments == totalAppointments) onUpdate(
-                                                appointmentsList
-                                            )
+                                            if (completedAppointments == totalAppointments) {
+                                                onUpdate(appointmentsList)
+                                            }
                                         }
                                     }
                             }
                         }
-                    }
-                    .addOnFailureListener {
+                    }.addOnFailureListener {
                         completedAppointments++
-                        if (completedAppointments == totalAppointments) onUpdate(appointmentsList)
+                        if (completedAppointments == totalAppointments) {
+                            onUpdate(appointmentsList)
+                        }
                     }
-
             }
         }
+
     }.addOnFailureListener { exception ->
         onFailure("Error fetching appointments: ${exception.message}")
     }
 }
-
-
-//// Function to fetch doctor details
-//fun fetchDoctorsDetails(
-//    db: FirebaseFirestore,
-//    doctorIds: List<String>,
-//    onSuccess: (List<DoctorInfo>) -> Unit
-//) {
-//    val doctorDetails = mutableListOf<DoctorInfo>()
-//    var completedDoctors = 0
-//    val totalDoctors = doctorIds.size
-//
-//    doctorIds.forEach { doctorId ->
-//        db.collection("Doctors").document(doctorId).get()
-//            .addOnSuccessListener { doctorDoc ->
-//                if (doctorDoc.exists()) {
-//                    val doctorName = doctorDoc.getString("name") ?: "Unknown Doctor"
-//                    val doctorLocation = doctorDoc.getString("location") ?: "Unknown Location"
-//                    val doctoralLatitude =
-//                        doctorDoc.getDouble("latitude")?.toString() ?: "Unknown Latitude"
-//                    val doctorLongitude =
-//                        doctorDoc.getDouble("longitude")?.toString() ?: "Unknown Longitude"
-//
-//                    val specialtyList = doctorDoc.get("specialty") as? List<*> ?: emptyList<Any>()
-//                    val specialty = specialtyList.joinToString(", ")
-//
-//                    DoctorInfo(doctorName, specialty, doctorLocation)
-//                }
-//                completedDoctors++
-//                if (completedDoctors == totalDoctors) {
-//                    onSuccess(doctorDetails)
-//                }
-//            }
-//            .addOnFailureListener {
-//                completedDoctors++
-//                if (completedDoctors == totalDoctors) {
-//                    onSuccess(doctorDetails)
-//                }
-//            }
-//    }
-//}
-//
 
 // Function to register a new user
 fun registerUser(
@@ -505,7 +433,6 @@ fun registerUser(
     }
 }
 
-
 //=====SHARED PREFERENCES=====
 // Function to store UID in SharedPreferences
 fun storeUidInSharedPreferences(uid: String, context: Context) {
@@ -520,4 +447,3 @@ fun getUidFromSharedPreferences(context: Context): String? {
     val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
     return sharedPreferences.getString("user_uid", null)
 }
-

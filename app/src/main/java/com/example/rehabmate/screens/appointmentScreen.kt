@@ -1,176 +1,355 @@
-package com.example.rehabmate
+package com.example.rehabmate.screens
 
-import android.os.Bundle
-import androidx.compose.ui.platform.LocalContext
-import org.osmdroid.config.Configuration
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.example.rehabmate.firebase.fetchExercisesForUser
 import com.example.rehabmate.firebase.fetchUserAppointmentsAndUpdateState
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import com.google.firebase.auth.FirebaseAuth
+import com.example.rehabmate.firebase.getUidFromSharedPreferences
+import com.example.rehabmate.ui.theme.red_color
+import com.example.rehabmate.ui.theme.white_color
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import org.osmdroid.util.GeoPoint
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
-// Data classes
+
+//for storing of doctor info
 data class DoctorInfo(
-    val name: String,
-    val specialty: String,
-    val location: String,
-    val latLng: GeoPoint? // Latitude and Longitude (GeoPoint)
+    val name: String, val specialty: String
 )
 
+//For storing of Appoint Data
 data class AppointmentData(
-    val id: String,
-    val doctors: List<DoctorInfo>,
-    val date: String,
-    val time: String,
-    val location: String
+    val id: String, val doctors: List<DoctorInfo>,  // Allow multiple doctors
+    val date: String, val time: String, val location: String
 )
 
 @Composable
 fun AppointmentScreen(navController: NavHostController) {
-    var appointments by remember { mutableStateOf<List<AppointmentData>>(listOf()) }
-    Configuration.getInstance().userAgentValue = "YourCustomUserAgent/1.0"
+    val context = LocalContext.current
+    val uid = getUidFromSharedPreferences(context).toString()
 
-
+    var appointments by remember { mutableStateOf<List<AppointmentData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    val uid = FirebaseAuth.getInstance().currentUser?.uid
+    var showAddAppointmentDialog by remember { mutableStateOf(false) }
+    var exerciseList by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
-    // Fetch appointments when the uid is available
+    // Function to get the latest appointment
+    val latestAppointment: AppointmentData? = appointments.sortedByDescending {
+        LocalDate.parse(
+            it.date,
+            DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        )
+    }.firstOrNull()
+
+    // Fetch appointments inside LaunchedEffect
     LaunchedEffect(uid) {
-        if (uid.isNullOrEmpty()) {
+        uid?.let {
+            fetchUserAppointmentsAndUpdateState(uid, { appointmentList ->
+                appointments = appointmentList
+                Log.d("UpdatedAppointments", appointments.toString())
+                isLoading = false
+            }, { error ->
+                Log.e("AppointmentScreen", error)
+                isLoading = false
+            })
+
+            // Fetch exercises
+            fetchExercisesForUser(uid, onSuccess = { exercises ->
+                // Log the entire exercises data to see the structure
+                Log.d("ExerciseList", exercises.toString())
+
+                // Check if the status is either "approved" or "progress"
+                if (exercises.any { exercise ->
+                        val status = (exercise["status"] as? String)?.uppercase()
+                        status == "APPROVED" || status == "PROGRESS"
+                    }) {
+                    // Retrieve only exercise_title and location from exercises
+                    val exerciseDetails = exercises.mapNotNull { exercise ->
+                        val exerciseTitle = exercise["exercise_title"] as? String
+                        val doctors = exercise["doctors"] as? List<Map<String, Any>>
+
+                        // If doctors exist, extract the location from the first one
+                        val location = doctors?.firstOrNull()?.get("location") as? String
+
+                        if (exerciseTitle != null && location != null) {
+                            exerciseTitle to location
+                        } else {
+                            null
+                        }
+                    }
+
+                    // Assign the filtered details to exerciseList
+                    exerciseList = exerciseDetails
+                    Log.d("exerciseList", exerciseList.toString())
+                }
+            }, onFailure = { error ->
+                Log.d("Error", "Error fetching exercises: $error")
+            })
+
+        } ?: run {
             Log.e("AppointmentScreen", "User not logged in")
             isLoading = false
-            return@LaunchedEffect
         }
-
-        fetchUserAppointmentsAndUpdateState(uid, { appointmentList ->
-            appointments = appointmentList  // Update the appointments list
-            Log.d("UpdatedAppointments", appointments.toString())  // Log the appointments
-            isLoading = false
-        }, { error ->
-            Log.e("AppointmentScreen", error)
-            isLoading = false
-        })
     }
 
-    // Show loading indicator while fetching appointments
-    if (isLoading) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF121212))
+    ) {
+        // Top Bar
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF2196F3))
+                .padding(16.dp)
         ) {
-            CircularProgressIndicator()
-            CircularProgressIndicator()
-        }
-    } else {
-        // Main UI content
-        Column {
-            // Top Bar
-            Box(
+            // Back button
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF2196F3))
-                    .padding(16.dp)
+                    .align(Alignment.CenterStart)
+                    .clickable { navController.popBackStack() }
+                    .size(24.dp))
+
+            // Header title
+            Text(
+                text = "APPOINTMENTS",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            // Add appointment button
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Appointment",
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clickable { showAddAppointmentDialog = true }
+                    .size(24.dp))
+        }
+
+        // Calendar header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF303030))
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .clickable { navController.popBackStack() }
-                        .size(24.dp)
-                )
                 Text(
-                    text = "APPOINTMENTS",
+                    text = "Upcoming Appointments",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    color = Color.White
                 )
-            }
 
-            // Display appointments in a LazyColumn
-            LazyColumn(modifier = Modifier.padding(8.dp)) {
-                items(appointments.size) { index ->  // Use items(count) version
-                    val appointment = appointments[index]
-                    AppointmentCard(appointment = appointment)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Show the latest appointment date
+
+                if (latestAppointment != null) {
+                    // Parse the date from latestAppointment
+                    val latestDate = LocalDate.parse(
+                        latestAppointment.date, DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                    )
+
+                    // Compare the parsed date with the current date
+                    if (latestDate.isBefore(LocalDate.now())) {
+                        // Latest appointment is in the past
+                        Text(
+                            text = "Latest appointment: ${
+                                latestDate.format(
+                                    DateTimeFormatter.ofPattern("dd MMM yyyy")
+                                )
+                            }", fontSize = 14.sp, color = Color.LightGray
+                        )
+                        Text(
+                            text = "(This appointment has passed)",
+                            fontSize = 14.sp,
+                            color = red_color
+                        )
+                    } else {
+                        // Latest appointment is in the future
+                        Text(
+                            text = "Latest appointment: ${
+                                latestDate.format(
+                                    DateTimeFormatter.ofPattern("dd MMM yyyy")
+                                )
+                            }", fontSize = 14.sp, color = Color.LightGray
+                        )
+                    }
+                } else {
+                    // If no appointment data is found
+                    Text(
+                        text = "No upcoming appointments", fontSize = 14.sp, color = Color.LightGray
+                    )
                 }
             }
+        }
+
+        // Show loading indicator
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        } else {
+            // If appointments are loaded, display them
+            if (appointments.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No appointments scheduled from the doctor",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                // Display appointments in LazyColumn
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(appointments) { appointment ->
+                        AppointmentCard(appointment = appointment)
+                    }
+                }
+            }
+        }
+
+        // Add appointment dialog
+        if (showAddAppointmentDialog) {
+            AddAppointmentDialog(
+                onDismiss = { showAddAppointmentDialog = false },
+                exerciseList = exerciseList,
+            )
         }
     }
 }
 
+
 @Composable
 fun AppointmentCard(appointment: AppointmentData) {
-    val context = LocalContext.current // Get the current context
-    val today = Calendar.getInstance().time
-    val appointmentDate =
-        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(appointment.date)
-    val daysDifference = (appointmentDate?.time ?: 0 - today.time) / (1000 * 60 * 60 * 24)
+    val currentDate = LocalDate.now()
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val appointmentDate = LocalDate.parse(appointment.date, dateFormatter)
+    val daysDifference = ChronoUnit.DAYS.between(currentDate, appointmentDate)
 
     val appointmentStatus = when {
-        daysDifference == 0L -> "Scheduled for today"
-        daysDifference > 0 -> "Upcoming appointment"
-        else -> "Appointment has passed"
+        daysDifference < 0 -> "Past appointment"
+        daysDifference == 0L -> "Today"
+        daysDifference == 1L -> "Tomorrow"
+        else -> "$daysDifference days left"
     }
 
-    // Create the Appointment Card
+    // Use remember to persist the state across recompositions
+    var detailsDisplayed by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .shadow(4.dp, RoundedCornerShape(12.dp))
-            .padding(4.dp),
+            .clip(RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Display doctor information for each appointment
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Display doctor information first
             appointment.doctors.forEachIndexed { index, doctor ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp),
                     verticalAlignment = Alignment.Top
                 ) {
+                    // point form
                     Text(
-                        "${index + 1}.",
+                        text = "${index + 1}.",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2196F3),
                         modifier = Modifier.padding(end = 8.dp)
                     )
+
+                    // Display the doctor's info
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Dr. ${doctor.name}",
+                            text = "Dr. " + doctor.name.split(" ")
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, // sentence case
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -178,7 +357,8 @@ fun AppointmentCard(appointment: AppointmentData) {
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            doctor.specialty,
+                            text = doctor.specialty.split(" ")
+                                .joinToString(" ") { it.replaceFirstChar { char -> char.uppercaseChar() } }, // sentence case
                             fontSize = 14.sp,
                             color = Color.Gray,
                             maxLines = 1,
@@ -188,109 +368,233 @@ fun AppointmentCard(appointment: AppointmentData) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp)) // Add space before map
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // OSMDroid Map (Show location of appointment)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E2E))
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    // Inside the map display logic (where you add the marker)
-                    val mapView = remember { MapView(context) }
-                    mapView.setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
-                    mapView.controller.setZoom(13) // Zoom in more for better visibility
-
-                    // Default location (Singapore)
-                    mapView.controller.setCenter(GeoPoint(1.352083, 103.819839))
-
-                    // Loop through doctors and add markers for their locations
-                    appointment.doctors.forEach { doctor ->
-                        doctor.latLng?.let { geoPoint ->
-                            Log.d("geoPoint", geoPoint.toString())
-                            val marker = Marker(mapView)
-                            marker.position = GeoPoint(geoPoint.latitude, geoPoint.longitude)
-                            marker.title = doctor.name
-                            mapView.overlays.add(marker)
-                        }
-                    }
-
-                    // Ensure map is redrawn after adding markers
-                    LaunchedEffect(mapView) {
-                        mapView.invalidate()
-                    }
-
-                    Log.d("MapState", "MapView overlays: ${mapView.overlays}")
-                    Log.d("MapDebug", "Markers added: ${mapView.overlays.size}")
-
-                    AndroidView(
-                        factory = { mapView },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp)) // Space between map and details
-
-            // Display appointment details
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = "Date",
-                    tint = Color(0xFF2196F3),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "${appointment.date} at ${appointment.time}",
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (appointment.location.isNotEmpty()) {
+            // Check if the appointment details have been displayed
+            if (!detailsDisplayed) {
+                // Show the appointment details only once
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.LocationOn,
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Date",
+                        tint = Color(0xFF2196F3),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${appointment.date} at ${appointment.time}",
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
                         contentDescription = "Location",
                         tint = Color(0xFF2196F3),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(appointment.location, fontSize = 14.sp, color = Color.White)
+                    Text(text = appointment.location, fontSize = 14.sp, color = Color.White)
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                appointmentStatus,
-                fontSize = 14.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            when {
-                daysDifference == 0L -> Text(
-                    "Your appointment is today!",
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End)
+                Text(
+                    text = appointmentStatus,
+                    fontSize = 14.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
 
-                daysDifference < 0 -> Text(
-                    "This appointment has already passed.",
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End)
-                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (daysDifference == 0L) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(text = "Your appointment is today!", color = Color.Gray)
+                    }
+                } else if (daysDifference < 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = {},
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                        ) {
+                            Text("This appointment has already passed.")
+                        }
+                    }
+                }
+
+                // Mark that the details have been displayed
+                detailsDisplayed = true
             }
         }
     }
+}
+
+@Composable
+fun AddAppointmentDialog(
+    onDismiss: () -> Unit,
+    exerciseList: List<Pair<String, String>> // List of exercises with names and locations
+) {
+    var doctorName by remember { mutableStateOf("") }
+    var specialty by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }
+    var time by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var selectedExercise by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+
+    // Function to update the location based on selected exercise
+    val onExerciseSelected: (String, String) -> Unit = { exerciseName, exerciseLocation ->
+        selectedExercise = exerciseName
+        location = exerciseLocation // Update the location based on the selected exercise
+    }
+    exerciseList.forEach { exercise ->
+        Log.d(
+            "Exercise split", "Exercise: ${exercise.first}, Location: ${exercise.second}"
+        )
+    }
+
+    // AlertDialog for adding an appointment
+    AlertDialog(
+        onDismissRequest = onDismiss, title = {
+            Text(
+                text = "Add New Appointment", fontSize = 18.sp, fontWeight = FontWeight.Bold
+            )
+        },
+
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                // Dropdown for Exercise Selection
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedExercise,
+                        onValueChange = {},
+                        label = { Text("Select Exercise") },
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown Arrow",
+                                modifier = Modifier.clickable { expanded = !expanded })
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null // This removes the ripple effect
+                            ) { expanded = !expanded })
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f) // Make the dropdown almost as wide as the parent
+                            .background(Color.White) // Light background for contrast
+                    ) {
+                        if (exerciseList.isEmpty()) {
+                            // Display message when no exercises exist
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "No exercises available",
+                                        color = Color.Gray,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    )
+                                },
+                                onClick = { /* No action needed */ },
+                                enabled = false // Make it non-clickable
+                            )
+                        } else {
+                            exerciseList.forEach { exercise ->
+                                DropdownMenuItem(text = {
+                                    Text(
+                                        text = exercise.first,
+                                        color = Color.Black // Ensure text is visible
+                                    )
+                                }, onClick = {
+                                    onExerciseSelected(exercise.first, exercise.second)
+                                    expanded = false
+                                })
+                            }
+                        }
+                    }
+                }
+
+
+                // Display location set automatically  based on the selected exercise
+                TextField(
+                    value = if (selectedExercise.isEmpty()) "No Exercise is selected" else location,
+                    onValueChange = { location = it },
+                    label = { Text("Location") },
+                    readOnly = true, // Location set when exercise is selected
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                // Doctor details and appointment info fields
+                TextField(
+                    value = doctorName,
+                    onValueChange = { doctorName = it },
+                    label = { Text("Doctor Name") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                TextField(
+                    value = specialty,
+                    onValueChange = { specialty = it },
+                    label = { Text("Specialty") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                TextField(
+                    value = date,
+                    onValueChange = { date = it },
+                    label = { Text("Date (DD/MM/YYYY)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                TextField(
+                    value = time,
+                    onValueChange = { time = it },
+                    label = { Text("Time") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
+        }, confirmButton = {
+            Button(
+                onClick = {
+                    Log.d("Add appointment", "add appointment clicked")
+                    // Here, add the appointment to the database
+                }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+            ) {
+                Text("ADD")
+            }
+        }, dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL")
+            }
+        })
 }
