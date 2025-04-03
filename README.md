@@ -1,5 +1,6 @@
 # 🤖 RehabMate - Smart Rehabilitation Assistant
 
+Note: Please use `API` branch.
 RehabMate is a mobile healthcare application designed to **support individuals recovering from injuries or surgeries** using **smartwatch technology and motion tracking**. By leveraging motion sensors and AI-driven feedback, RehabMate ensures users perform rehabilitation exercises correctly, reducing the risk of re-injury and optimizing recovery progress.
 
 ---
@@ -7,22 +8,39 @@ RehabMate is a mobile healthcare application designed to **support individuals r
 ## 🌟 Key Features
 
 ### 📊 **Dashboard**
-- Provides a **comprehensive overview** of recovery progress.
+- Provides a **comprehensive overview** of recovery progress using AI generated insights.
 - Displays **personalized insights** based on exercise performance.
 - Helps users stay **motivated and on track** with their rehabilitation.
+- Review **upcoming appointments** set by the doctors
+- Progress Tracking **percentage completion of exercises**
+- History **medical records**
+- Access to **rehab exercises set by users doctors**
+
+### 🏋️ **Exercise**
+- **Muscle focused** exercises
+- Different exercises to focus on the specific muscle group
+- **Duration** of exercises for easy time management
+- **Detailed description** allows users to get into positions/get the equipment ready before starting the exercise
 
 ### 🏋️ **Start Exercise**
 - **Tracks movements** using smartwatch motion sensors.
-- Uses the **camera to analyze user form** and detect inconsistencies.
-- Provides **real-time feedback** on form and range of motion.
+- **Text to speech** for hands free instructions during exercises
+- Stopwatch for **timing** exercise
 
-### 🔔 **Notifications & Alerts**
-- Sends **reminders** to keep users consistent with their exercises.
-- Provides **personalized safety alerts** to prevent incorrect movements.
+## **Watch Integration**
+- Sensors and motion tracking for **real-time feedback**
+- Real-time logging of exercise progress
+- Sensors includes **Gyroscope, Rotation, Heartbeat**
+- Sent to Phone for logging & analysis via **Bluetooth in Data Layer**.
 
 ### 🔐 **User Authentication**
 - Secure **login system** to protect user data.
 - Supports **multi-device synchronization** for seamless access.
+
+### **AI-Powered**
+- Tracks the user **exercise completion**
+- Predicts the progression pace
+- Provide advices to user base on predicted pacing
 
 ---
 
@@ -30,13 +48,18 @@ RehabMate is a mobile healthcare application designed to **support individuals r
 ✅ **Smart & Adaptive** – Tailored guidance based on real-time motion tracking.  
 ✅ **Easy to Use** – Intuitive interface for all age groups.  
 ✅ **Safety First** – Prevents incorrect movements and reduces re-injury risks.  
-✅ **Stay on Track** – Reminders and insights keep users engaged in recovery.  
+✅ **Stay on Track** – Reminders and insights keep users engaged in recovery.
 
 ---
 
 ## 📌 Getting Started
-1. **Download & Install**
-2. **Sign Up & Connect** – Register and sync with a smartwatch.
-3. **Start Your Journey** – Track, improve, and recover efficiently!
+1. **Use `API` branch**
+2. **Download & Install**
+3. **Run the mobile application**
+4. **Connects phone with the smartwatch** - for sensors and motion tracking
+    - For Emulator - Pair the phone with the watch emulator
+5. **Navigate to /wear and run wear application**
+6. **Sign Up & Connect** – Register and sync with a smartwatch.
+7. **Start Your Journey** – Track, improve, and recover efficiently!
 
 Join us in making rehabilitation **smarter, safer, and more effective** with RehabMate! 💪
