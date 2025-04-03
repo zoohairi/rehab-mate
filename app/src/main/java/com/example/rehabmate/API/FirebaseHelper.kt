@@ -233,6 +233,7 @@ fun updateUserProfile(
     val updatedData = mapOf(
         "profile" to mapOf(
             "address" to address,
+            "name" to name,
             "date" to date,
             "phone_number" to phoneNumber,  // Ensure phone_number is a String
         )

@@ -1,5 +1,6 @@
 package com.example.rehabmate.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,9 +41,10 @@ fun ProfileScreen(navController: NavHostController) {
     LaunchedEffect(uid) {
         uid?.let {
             fetchUserInfo(it).onSuccess { data ->
-                name = data["name"] as? String ?: "No Name"
-                email = data["email"] as? String ?: "No Email"
+                Log.d("ProfileScreen", "User data: $data")
                 val profile = data["profile"] as? Map<String, Any> ?: emptyMap()
+                name = profile["name"] as? String ?: "No Name" // <-- correct
+                email = data["email"] as? String ?: "No Email"
                 phone = profile["phone_number"]?.toString() ?: "-"
                 birthDate = profile["date"] as? String ?: "-"
 
@@ -56,6 +58,7 @@ fun ProfileScreen(navController: NavHostController) {
         } ?: run {
             error = "User not logged in"
         }
+
     }
 
     Column(

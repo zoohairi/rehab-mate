@@ -45,7 +45,6 @@ import com.example.rehabmate.firebase.fetchExercisesForUser
 import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.getUidFromSharedPreferences
 import com.example.rehabmate.generateSpeech
-import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.firebase.Timestamp
@@ -55,11 +54,8 @@ import kotlinx.coroutines.delay
 import java.nio.FloatBuffer
 import java.util.Optional
 
-//Watch Items
-import com.google.android.gms.wearable.MessageClient
-import com.google.android.gms.wearable.MessageEvent
-import com.google.android.gms.wearable.Wearable
 import androidx.compose.runtime.DisposableEffect
+import com.google.android.gms.wearable.MessageClient
 
 import org.json.JSONObject
 
@@ -366,7 +362,10 @@ fun ExerciseDemoTab(
         Log.d("Hello", "DisposableEffect called")
         val listener = object : MessageClient.OnMessageReceivedListener {
             override fun onMessageReceived(messageEvent: MessageEvent) {
-                Log.d("DashboardScreen", "Received message: ${messageEvent.path} -> ${String(messageEvent.data)}")
+                Log.d(
+                    "DashboardScreen",
+                    "Received message: ${messageEvent.path} -> ${String(messageEvent.data)}"
+                )
             }
         }
         Wearable.getMessageClient(context).addListener(listener)

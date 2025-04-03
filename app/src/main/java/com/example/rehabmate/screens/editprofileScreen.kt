@@ -1,11 +1,7 @@
 package com.example.rehabmate.screens
 
-import android.app.Activity
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,27 +10,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.rehabmate.R
 import com.example.rehabmate.firebase.fetchUserInfo
 import com.example.rehabmate.firebase.updateUserProfile
-import com.example.rehabmate.ui.theme.blue_color
-import com.example.rehabmate.ui.theme.green_color
-import com.example.rehabmate.ui.theme.red_color
-import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.widget.Autocomplete
-import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.firebase.auth.FirebaseAuth
-import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,20 +37,11 @@ fun editprofileScreen(navController: NavHostController) {
     var successMessage by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        if (!Places.isInitialized()) {
-            val apiKey = context.getString(R.string.google_api_key)
-            Places.initialize(context, apiKey)
-        }
-    }
+    val colors = MaterialTheme.colorScheme
 
     LaunchedEffect(uid) {
         uid?.let { safeUid ->
             fetchUserInfo(safeUid).onSuccess { userData ->
-                Log.d("UserDataaaa", userData.toString())
                 val profile = userData["profile"] as? Map<String, Any> ?: emptyMap()
                 name = profile["name"] as? String ?: ""
                 email = userData["email"] as? String ?: ""
@@ -81,19 +55,13 @@ fun editprofileScreen(navController: NavHostController) {
         }
     }
 
-    val colors = MaterialTheme.colorScheme
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Edit Profile") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.onPrimary
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colors.onPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(
@@ -114,10 +82,10 @@ fun editprofileScreen(navController: NavHostController) {
             if (successMessage.isNotEmpty()) {
                 Text(
                     text = successMessage,
-                    color = green_color,
+                    color = colors.primary,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(green_color.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                        .background(colors.primary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                         .padding(8.dp)
                 )
             }
@@ -125,10 +93,10 @@ fun editprofileScreen(navController: NavHostController) {
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
-                    color = red_color,
+                    color = colors.error,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(red_color.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                        .background(colors.error.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                         .padding(8.dp)
                 )
             }
@@ -178,35 +146,17 @@ fun editprofileScreen(navController: NavHostController) {
                         )
                     )
 
-                    val launcher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.StartActivityForResult()
-                    ) { result ->
-                        if (result.resultCode == Activity.RESULT_OK) {
-                            val place = Autocomplete.getPlaceFromIntent(result.data!!)
-                            address = place.address ?: ""
-                        }
-                    }
-
                     Text("Address", fontWeight = FontWeight.Bold, color = colors.onSurface)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(colors.surface)
-                            .clickable {
-                                val intent = Autocomplete.IntentBuilder(
-                                    AutocompleteActivityMode.OVERLAY,
-                                    listOf(Place.Field.ID, Place.Field.ADDRESS)
-                                ).build(context)
-                                launcher.launch(intent)
-                            }
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = if (address.isEmpty()) "Pick Address" else address,
-                            color = if (address.isEmpty()) Color.Gray else colors.onSurface
+                    TextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = colors.surface,
+                            focusedContainerColor = colors.surface
                         )
-                    }
+                    )
 
                     Text("Date of Birth", fontWeight = FontWeight.Bold, color = colors.onSurface)
                     TextField(
@@ -226,19 +176,42 @@ fun editprofileScreen(navController: NavHostController) {
 
             Button(
                 onClick = {
-                    // save profile logic
+                    isLoading = true
+                    errorMessage = ""
+                    successMessage = ""
+                    uid?.let { safeUid ->
+                        updateUserProfile(
+                            uid = safeUid,
+                            name = name,
+                            email = email,
+                            address = address,
+                            date = birthDate,
+                            phoneNumber = (phone.toIntOrNull() ?: 0).toString(),
+                            onSuccess = {
+                                isLoading = false
+                                successMessage = "Profile updated successfully"
+                            },
+                            onFailure = { error ->
+                                isLoading = false
+                                errorMessage = error
+                            }
+                        )
+                    } ?: run {
+                        isLoading = false
+                        errorMessage = "User not logged in"
+                    }
                 },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = green_color),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = colors.onPrimary, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("SAVE CHANGES", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("SAVE CHANGES", fontWeight = FontWeight.Bold, color = colors.onPrimary)
                 }
             }
         }
