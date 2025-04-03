@@ -88,6 +88,7 @@ dependencies {
 
     // Machine learning
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.21.0")
+    implementation(libs.play.services.wearable)
 
     // Testing libraries
     testImplementation(libs.junit)
