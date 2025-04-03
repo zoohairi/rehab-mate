@@ -59,7 +59,7 @@ play-services-base = { module = "com.google.android.gms:play-services-base", ver
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 
 [plugins]
-android-application = { id = "com.android.application", version.ref = "agp" }
+android-application = { id = "com.android.application", version = "8.8.2" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
