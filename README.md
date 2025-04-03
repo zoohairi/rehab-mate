@@ -38,7 +38,7 @@ RehabMate is a mobile healthcare application designed to **support individuals r
 - Secure **login system** to protect user data.
 - Supports **multi-device synchronization** for seamless access.
 
-### ***AI-Powered *** ###
+### **AI-Powered **
 - Tracks the user **exercise completion**
 - Predicts the progression pace
 - Provide advices to user base on predicted pacing
