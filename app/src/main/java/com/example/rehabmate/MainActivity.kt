@@ -130,8 +130,7 @@ fun MainScreen(navController: NavHostController, auth: FirebaseAuth) {
     )
 
     // Check if current route is an auth screen or if user is not logged in
-    val shouldShowBottomBar = isLoggedIn && currentRoute != null && !authScreens.any {
-            route ->
+    val shouldShowBottomBar = isLoggedIn && currentRoute != null && !authScreens.any { route ->
         if (route.contains("{")) {
             // Handle route with parameter
             val routeBase = route.substringBefore("{")
@@ -209,18 +208,6 @@ fun BottomNavigationBar(navController: NavController, currentRoute: String?) {
             }
         )
 
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Face, contentDescription = "Exercise API") },
-            label = { Text("Exercise API") },
-            selected = currentRoute == "exercise_screen_api",
-            onClick = {
-                if (currentRoute != "exercise_screen_api") {
-                    navController.navigate("exercise_screen_api") {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            }
-        )
+
     }
 }
