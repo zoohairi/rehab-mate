@@ -32,13 +32,11 @@ RehabMate is a mobile healthcare application designed to **support individuals r
 - Sensors includes **Gyroscope, Rotation, Heartbeat** 
 - Sent to Phone for logging & analysis via **Bluetooth in Data Layer**.
 
-
-
 ### 🔐 **User Authentication**
 - Secure **login system** to protect user data.
 - Supports **multi-device synchronization** for seamless access.
 
-### **AI-Powered **
+### **AI-Powered**
 - Tracks the user **exercise completion**
 - Predicts the progression pace
 - Provide advices to user base on predicted pacing
