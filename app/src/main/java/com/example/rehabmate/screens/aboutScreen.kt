@@ -1,6 +1,5 @@
 package com.example.rehabmate.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,16 +35,15 @@ fun AboutAppScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(Color(0xFF181818)) // softer dark for health theme
     ) {
         // Top Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF2196F3))
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
-            // Back button
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
@@ -53,13 +51,12 @@ fun AboutAppScreen(navController: NavHostController) {
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clickable { navController.popBackStack() }
-                    .size(24.dp)
+                    .size(26.dp)
             )
 
-            // Header title
             Text(
                 text = "ABOUT APP",
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 modifier = Modifier.align(Alignment.Center)
@@ -70,14 +67,14 @@ fun AboutAppScreen(navController: NavHostController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(20.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // App Logo (replace with your app's actual logo)
+            // App Logo
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(130.dp)
                     .clip(CircleShape)
                     .background(Color.White),
                 contentAlignment = Alignment.Center
@@ -92,15 +89,13 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // App Name
             Text(
                 text = "RehabMate",
-                fontSize = 24.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
 
-            // App Version
             Text(
                 text = "Version 1.0.0",
                 fontSize = 14.sp,
@@ -109,7 +104,6 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // About App Section
             AboutSection(
                 title = "About RehabMate",
                 content = "RehabMate is a comprehensive rehabilitation companion app designed to assist patients in their recovery journey. The app provides personalized exercise plans, appointment scheduling, and progress tracking to ensure optimal recovery outcomes."
@@ -117,7 +111,6 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Features Section
             AboutSection(
                 title = "Key Features",
                 content = "• Personalized exercise programs\n• Appointment scheduling and reminders\n• Progress tracking and reporting\n• Direct communication with healthcare providers\n• Educational resources and videos\n• Secure medical records access"
@@ -125,7 +118,6 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Team Section
             AboutSection(
                 title = "Our Team",
                 content = "RehabMate was developed by a dedicated team of healthcare professionals, software engineers, and UI/UX designers committed to improving patient outcomes through technology."
@@ -133,17 +125,17 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Contact Information
+            // Contact Section
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(16.dp)),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -155,14 +147,13 @@ fun AboutAppScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Email
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clickable {
-                                // Open email client logic would go here
+                                // Open email
                             }
                     ) {
                         Icon(
@@ -183,14 +174,13 @@ fun AboutAppScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Phone
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clickable {
-                                // Open phone dialer logic would go here
+                                // Open phone dialer
                             }
                     ) {
                         Icon(
@@ -211,10 +201,9 @@ fun AboutAppScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Website
                     Button(
                         onClick = {
-                            // Open website logic would go here
+                            // Open website
                         },
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
@@ -230,37 +219,27 @@ fun AboutAppScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Terms and Privacy
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 TextButton(
                     onClick = {
-                        // Navigate to Terms & Conditions
+                        // Terms
                     }
                 ) {
-                    Text(
-                        text = "Terms & Conditions",
-                        color = Color(0xFF2196F3),
-                        fontSize = 14.sp
-                    )
+                    Text("Terms & Conditions", color = Color(0xFF2196F3), fontSize = 14.sp)
                 }
 
                 TextButton(
                     onClick = {
-                        // Navigate to Privacy Policy
+                        // Privacy
                     }
                 ) {
-                    Text(
-                        text = "Privacy Policy",
-                        color = Color(0xFF2196F3),
-                        fontSize = 14.sp
-                    )
+                    Text("Privacy Policy", color = Color(0xFF2196F3), fontSize = 14.sp)
                 }
             }
 
-            // Copyright notice
             Text(
                 text = "© 2025 RehabMate. All rights reserved.",
                 fontSize = 12.sp,
@@ -279,13 +258,13 @@ fun AboutSection(title: String, content: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Text(
                 text = title,
@@ -300,7 +279,7 @@ fun AboutSection(title: String, content: String) {
                 text = content,
                 fontSize = 14.sp,
                 color = Color.LightGray,
-                lineHeight = 24.sp
+                lineHeight = 22.sp
             )
         }
     }

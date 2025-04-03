@@ -47,12 +47,14 @@ fun WelcomeScreen(navController: NavHostController) {
                 )
                 Spacer(modifier = Modifier.height(5.dp))
                 Text(
-                    text = "Your Partner in Recovery, Every Step of the Way!", style = MaterialTheme.typography.headlineLarge.copy(
+                    text = "Your Partner in Recovery, Every Step of the Way!",
+                    style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         fontStyle = FontStyle.Italic,
                         letterSpacing = 2.sp
-                    ), textAlign = TextAlign.Center
+                    ),
+                    textAlign = TextAlign.Center
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -83,4 +85,3 @@ fun WelcomeScreen(navController: NavHostController) {
         }
     }
 }
-

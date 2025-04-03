@@ -6,9 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.rehabmate.screens.*
-import com.example.rehabmate.screens.demoPurposes.ExerciseApiScreen
-import com.example.rehabmate.screens.demoPurposes.ExerciseDemoScreen
-import com.example.rehabmate.screens.demoPurposes.SpeechScreen
 import com.example.rehabmate.screens.WelcomeScreen
 
 @Composable
@@ -40,25 +37,9 @@ fun NavGraph(
         composable("referral_screen") { ReferralScreen(navController) }
 
         // Exercise Screens
-        composable("dashboard_screen") { DashboardScreen(navController) }
+        composable("dashboard_screen") { HomeTab(navController) }
         composable("favorites_screen") { FavoritesScreen(navController) }
         composable("beginner_exercise_screen") { BeginnerExerciseScreen(navController) }
-
-        // Speech Screen - Using the proper Composable function
-        composable("speechScreen/{instructions}") { backStackEntry ->
-            val instructions = backStackEntry.arguments?.getString("instructions") ?: ""
-            SpeechScreen(navController, instructions)
-        }
-
-        composable("exercise_screen_api") {
-            ExerciseApiScreen(navController)
-        }
-
-        // Exercise Details Screens
-        composable("exercise_demo_screen/{exerciseId}") { backStackEntry ->
-            val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: "0"
-            ExerciseDemoScreen(navController)
-        }
 
         composable("about_app_screen") { AboutAppScreen(navController) }
         composable("medical_records_screen") {
